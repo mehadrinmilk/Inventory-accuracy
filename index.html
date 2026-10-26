@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inventory Accuracy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f5f7f9; --surface: #ffffff; --fg: #18212b; --muted: #5f6b78; --line: #dde3ea;
+  --accent: #1f5fa8; --accent-soft: #e3edf8; --on-accent: #ffffff;
+  --ok: #1d7a4a; --ok-soft: #e1f2e8; --warn: #9a5b00; --warn-soft: #fbefd9; --bad: #b3261e; --bad-soft: #fbe4e2;
+  --sans: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #11161c; --surface: #18202a; --fg: #e6ebf1; --muted: #93a0ae; --line: #2a3542;
+  --accent: #7fb2ec; --accent-soft: #1d2e44; --on-accent: #0d1520;
+  --ok: #6fd39d; --ok-soft: #173326; --warn: #f0b75c; --warn-soft: #3a2c14; --bad: #f08a83; --bad-soft: #3a1b19; color-scheme: dark } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 var(--sans); }
+[hidden] { display: none !important; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 24px 16px 48px; display: grid; gap: 20px; }
+h1 { font-weight: 800; font-size: 1.8rem; letter-spacing: -0.02em; margin: 0; }
+h2 { font-size: 1.05rem; margin: 0; font-weight: 600; }
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
+.who { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.85rem; flex-wrap: wrap; }
+.meta { color: var(--muted); font-size: 0.85rem; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 14px; }
+.narrow { max-width: 420px; margin: 8vh auto 0; }
+label.f { display: grid; gap: 4px; font-size: 0.85rem; color: var(--muted); }
+input[type=email], input[type=password], input[type=search], select, textarea {
+  font: inherit; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; width: 100%; }
+button { font: inherit; cursor: pointer; }
+.btn { border: 0; background: var(--accent); color: var(--on-accent); font-weight: 600; padding: 9px 16px; border-radius: 6px; }
+.btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--line); font-weight: 500; }
+.btn:disabled { opacity: .5; cursor: default; }
+.link { background: none; border: 0; color: var(--accent); padding: 0; text-decoration: underline; }
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.msg { font-size: 0.88rem; padding: 8px 12px; border-radius: 6px; background: var(--accent-soft); color: var(--fg); }
+.msg.err { background: var(--bad-soft); color: var(--bad); }
+.msg.ok { background: var(--ok-soft); color: var(--ok); }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 14px; color: var(--muted); font-weight: 500; margin-bottom: -1px; }
+.tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--accent); }
+.badge { background: var(--warn-soft); color: var(--warn); border-radius: 999px; padding: 0 7px; font-size: 0.75rem; margin-left: 4px; }
+.summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.stat { background: var(--surface); padding: 14px 16px; display: grid; gap: 4px; }
+.stat .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.stat .v { font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.stat .v small { font-size: 0.85rem; color: var(--muted); font-weight: 400; }
+.bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .4s; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.controls #q { flex: 1 1 240px; width: auto; }
+.controls select { width: auto; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: transparent; color: var(--fg); padding: 7px 12px; border-right: 1px solid var(--line); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.tablebox { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; min-width: 860px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th { background: var(--surface); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 0.85rem; }
+td.code { font-family: var(--mono); font-size: 0.82rem; white-space: nowrap; }
+td.desc { max-width: 380px; }
+.pack { color: var(--muted); font-size: 0.8rem; }
+.neg { color: var(--bad); }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 500; white-space: nowrap; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.none { color: var(--muted); border: 1px dashed var(--line); }
+.when { color: var(--muted); font-size: 0.78rem; display: block; margin-top: 2px; white-space: nowrap; }
+.act { font-size: 0.8rem; border: 1px solid var(--line); background: var(--surface); color: var(--fg); padding: 4px 10px; border-radius: 5px; white-space: nowrap; }
+.act.primary { border-color: var(--accent); color: var(--accent); }
+.act:disabled { opacity: .5; cursor: default; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.drop { border: 1.5px dashed var(--line); border-radius: 6px; padding: 18px; display: grid; gap: 6px; place-content: center; text-align: center; color: var(--muted); cursor: pointer; min-height: 110px; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.drop strong { color: var(--fg); }
+textarea { font: 0.85rem var(--mono); min-height: 110px; resize: vertical; }
+.preview { display: grid; gap: 6px; font-size: 0.88rem; }
+.missing { font-family: var(--mono); font-size: 0.8rem; color: var(--bad); word-break: break-word; }
+.foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: 0.82rem; }
+.ro { font-size: 0.8rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; }
+@media (max-width: 720px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .two { grid-template-columns: 1fr; } h1 { font-size: 1.45rem; } }
+@media (prefers-reduced-motion: reduce) { .bar > i { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Shown when config.js has not been filled in -->
+  <section class="card narrow" id="vNoConfig" hidden>
+    <h1>Inventory Accuracy</h1>
+    <div class="msg err">This site isn't connected to its database yet. Open <b>config.js</b> on GitHub and paste in your Supabase Project URL and Publishable key.</div>
+  </section>
+
+  <!-- Sign in / create account -->
+  <section class="card narrow" id="vAuth" hidden>
+    <h1>Inventory Accuracy</h1>
+    <p class="meta" id="authIntro" style="margin:0">Sign in to see the inventory tracker.</p>
+    <form id="authForm" class="card" style="padding:0;border:0" novalidate>
+      <label class="f">Email<input type="email" id="authEmail" autocomplete="email" required></label>
+      <label class="f" id="pwWrap">Password<input type="password" id="authPw" autocomplete="current-password" minlength="8" required></label>
+      <button class="btn" id="authBtn" type="submit">Sign in</button>
+    </form>
+    <div class="msg" id="authMsg" hidden></div>
+    <div class="meta" style="display:flex;gap:16px;flex-wrap:wrap">
+      <button class="link" id="toSignup" type="button">Create an account</button>
+      <button class="link" id="toSignin" type="button" hidden>I already have an account</button>
+      <button class="link" id="toReset" type="button">Forgot password</button>
+    </div>
+  </section>
+
+  <!-- Set a new password after a reset email -->
+  <section class="card narrow" id="vNewPw" hidden>
+    <h1>Set a new password</h1>
+    <form id="newPwForm" class="card" style="padding:0;border:0">
+      <label class="f">New password (at least 8 characters)<input type="password" id="newPw" autocomplete="new-password" minlength="8" required></label>
+      <button class="btn" type="submit">Save password</button>
+    </form>
+    <div class="msg" id="newPwMsg" hidden></div>
+  </section>
+
+  <!-- Signed in but not approved -->
+  <section class="card narrow" id="vPending" hidden>
+    <h1>Waiting for approval</h1>
+    <p style="margin:0">You're signed in as <b id="pendEmail"></b>. The owner needs to approve your account before you can see the inventory. Check back later.</p>
+    <button class="btn ghost" id="pendRefresh" type="button">Check again</button>
+    <button class="link" data-signout type="button">Sign out</button>
+  </section>
+
+  <!-- The app -->
+  <div id="vApp" hidden style="display:grid;gap:20px">
+    <div class="top">
+      <div><h1>Inventory Accuracy</h1><div class="meta" id="meta">Loading…</div></div>
+      <div class="who"><span class="ro" id="roTag" hidden>View only</span><span id="whoEmail"></span><button class="btn ghost" id="refresh" type="button">Refresh</button><button class="btn ghost" data-signout type="button">Sign out</button></div>
+    </div>
+
+    <div class="tabs" role="tablist" id="tabs" hidden>
+      <button role="tab" data-tab="tTrack" aria-selected="true">Tracker</button>
+      <button role="tab" data-tab="tUpload" aria-selected="false">Upload</button>
+      <button role="tab" data-tab="tPeople" aria-selected="false">People<span class="badge" id="pendCount" hidden></span></button>
+    </div>
+    <div class="msg" id="appMsg" hidden></div>
+
+    <!-- Tracker -->
+    <div id="tTrack" style="display:grid;gap:16px">
+      <section class="summary" aria-label="Progress">
+        <div class="stat"><span class="k">Verified accurate</span><span class="v" id="sVer">–</span></div>
+        <div class="stat"><span class="k">Not checked yet</span><span class="v" id="sTodo">–</span></div>
+        <div class="stat"><span class="k">Count changed since check</span><span class="v" id="sChg">–</span></div>
+        <div class="stat"><span class="k">Progress</span><span class="v" id="sPct">–</span><div class="bar"><i id="bar"></i></div></div>
+      </section>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Status filter" id="seg">
+          <button data-f="all" aria-pressed="true">All</button>
+          <button data-f="todo" aria-pressed="false">Not checked</button>
+          <button data-f="ok" aria-pressed="false">Verified</button>
+          <button data-f="chg" aria-pressed="false">Count changed</button>
+        </div>
+        <input type="search" id="q" placeholder="Search code or description" aria-label="Search products">
+        <select id="sup" aria-label="Supplier"><option value="">All suppliers</option></select>
+        <label class="meta"><input type="checkbox" id="ns"> Show non-stock lines</label>
+      </div>
+      <div class="tablebox">
+        <table>
+          <thead><tr><th>Code</th><th>Product</th><th class="num">Physical</th><th>UM</th><th class="num">Available</th><th class="num">Reserved</th><th>Supplier</th><th>Status</th><th></th></tr></thead>
+          <tbody id="rows"><tr><td colspan="9" class="meta">Loading products…</td></tr></tbody>
+        </table>
+      </div>
+      <div class="foot"><span id="shown"></span><span>A check records the physical count at the moment it was confirmed.</span></div>
+    </div>
+
+    <!-- Upload (owner) -->
+    <div id="tUpload" hidden style="display:grid;gap:20px">
+      <section class="card">
+        <h2>Batch mark accurate</h2>
+        <div class="two">
+          <label class="drop" id="bDrop" for="bFile">
+            <span><strong>Drop a spreadsheet here</strong> or click to choose one</span>
+            <span>.xlsx, .xls or .csv. Uses the "Code" column, or the first column if there isn't one.</span>
+            <input type="file" id="bFile" accept=".xlsx,.xls,.csv,.txt" hidden>
+          </label>
+          <textarea id="bPaste" placeholder="Or paste product codes, one per line or separated by commas&#10;CY98&#10;SMSSMB" aria-label="Paste product codes"></textarea>
+        </div>
+        <div class="preview" id="bPrev"></div>
+        <button class="btn" id="bGo" hidden type="button">Mark accurate</button>
+      </section>
+
+      <section class="card">
+        <h2>Load a new warehouse export</h2>
+        <p class="meta" style="margin:0">Upload the full product export (.xlsx) to replace the product list and counts. Checks you've already made are kept. Any product whose count changed since you checked it will show "Recheck".</p>
+        <label class="drop" id="eDrop" for="eFile">
+          <span><strong>Drop the export here</strong> or click to choose it</span>
+          <span>Needs the columns Code, Description and Physical</span>
+          <input type="file" id="eFile" accept=".xlsx,.xls,.csv" hidden>
+        </label>
+        <div class="preview" id="ePrev"></div>
+        <button class="btn" id="eGo" hidden type="button">Replace product list</button>
+      </section>
+    </div>
+
+    <!-- People (owner) -->
+    <div id="tPeople" hidden style="display:grid;gap:16px">
+      <section class="card">
+        <h2>People</h2>
+        <p class="meta" style="margin:0">Anyone can create an account on this site, but they see nothing until you set them to <b>Approved</b>. Send them the site link and ask them to create an account.</p>
+        <div class="tablebox" style="border:0">
+          <table style="min-width:520px">
+            <thead><tr><th>Email</th><th>Signed up</th><th>Access</th></tr></thead>
+            <tbody id="people"></tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = n => n == null ? "" : (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const fmtDate = iso => { try { return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); } catch { return ""; } };
+const isNonStock = code => /[\s()]/.test(code);
+const views = ["vNoConfig", "vAuth", "vNewPw", "vPending", "vApp"];
+const show = v => views.forEach(id => $(id).hidden = id !== v);
+function note(el, text, kind) { const m = $(el); m.hidden = !text; m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
+
+const cfg = window.APP_CONFIG || {};
+if (!cfg.SUPABASE_URL || !cfg.SUPABASE_URL.startsWith("http") || !cfg.SUPABASE_KEY || cfg.SUPABASE_KEY.startsWith("PASTE")) {
+  show("vNoConfig");
+  throw new Error("config.js not filled in");
+}
+const sb = supabase.createClient(cfg.SUPABASE_URL.trim(), cfg.SUPABASE_KEY.trim());
+const siteUrl = location.origin + location.pathname;
+
+let me = null, role = null, products = [], checks = {}, profiles = [], filter = "all", recovering = false;
+
+// ---------------- Auth ----------------
+let authMode = "signin";
+function setAuthMode(m) {
+  authMode = m;
+  $("authBtn").textContent = m === "signin" ? "Sign in" : m === "signup" ? "Create account" : "Send reset link";
+  $("pwWrap").hidden = m === "reset";
+  $("authPw").autocomplete = m === "signup" ? "new-password" : "current-password";
+  $("toSignup").hidden = m === "signup";
+  $("toSignin").hidden = m === "signin";
+  $("toReset").hidden = m === "reset";
+  $("authIntro").textContent = m === "signup" ? "Create an account. The owner will approve it before you can see the inventory."
+    : m === "reset" ? "Enter your email and we'll send you a link to set a new password." : "Sign in to see the inventory tracker.";
+  note("authMsg", "");
+}
+$("toSignup").onclick = () => setAuthMode("signup");
+$("toSignin").onclick = () => setAuthMode("signin");
+$("toReset").onclick = () => setAuthMode("reset");
+$("authForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const email = $("authEmail").value.trim(), password = $("authPw").value;
+  if (!email) return note("authMsg", "Enter your email.", "err");
+  if (authMode !== "reset" && password.length < 8) return note("authMsg", "Passwords need at least 8 characters.", "err");
+  $("authBtn").disabled = true;
+  try {
+    if (authMode === "signin") {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    } else if (authMode === "signup") {
+      const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: siteUrl } });
+      if (error) throw error;
+      if (!data.session) note("authMsg", "Account created. Check your email and click the confirmation link, then sign in here.", "ok");
+    } else {
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: siteUrl });
+      if (error) throw error;
+      note("authMsg", "If that email has an account, a reset link is on its way.", "ok");
+    }
+  } catch (err) {
+    const m = String(err.message || err);
+    note("authMsg", /invalid login/i.test(m) ? "That email and password don't match. Try again or reset your password."
+      : /not confirmed/i.test(m) ? "Your email isn't confirmed yet. Click the link in the confirmation email first."
+      : /rate limit/i.test(m) ? "Too many emails sent in the last hour. Wait a bit and try again." : m, "err");
+  } finally { $("authBtn").disabled = false; }
+});
+$("newPwForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  const { error } = await sb.auth.updateUser({ password: $("newPw").value });
+  if (error) return note("newPwMsg", error.message, "err");
+  recovering = false; note("newPwMsg", "Password saved.", "ok"); setTimeout(route, 800);
+});
+document.querySelectorAll("[data-signout]").forEach(b => b.onclick = async () => { await sb.auth.signOut(); });
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === "PASSWORD_RECOVERY") { recovering = true; show("vNewPw"); return; }
+  const id = session?.user?.id || null;
+  if (event === "INITIAL_SESSION" || id !== (me?.id || null)) { me = session?.user || null; setTimeout(route, 0); }
+});
+
+async function route() {
+  if (recovering) return show("vNewPw");
+  if (!me) { setAuthMode("signin"); return show("vAuth"); }
+  const { data, error } = await sb.from("profiles").select("role").eq("id", me.id).maybeSingle();
+  role = error ? null : data?.role;
+  if (role === "owner" || role === "viewer") {
+    show("vApp");
+    $("whoEmail").textContent = me.email;
+    $("roTag").hidden = role === "owner";
+    $("tabs").hidden = role !== "owner";
+    await loadAll();
+  } else {
+    $("pendEmail").textContent = me.email;
+    show("vPending");
+  }
+}
+$("pendRefresh").onclick = route;
+
+// ---------------- Data ----------------
+async function fetchAll(table, cols) {
+  const out = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await sb.from(table).select(cols).order(table === "profiles" ? "created_at" : "code").range(from, from + 999);
+    if (error) throw error;
+    out.push(...data);
+    if (data.length < 1000) return out;
+  }
+}
+async function loadAll() {
+  try {
+    const [p, c, m] = await Promise.all([
+      fetchAll("products", "code,description,physical,um,available,reserved,pack,supplier,non_stock"),
+      fetchAll("checks", "code,qty,checked_at"),
+      sb.from("meta").select("key,value"),
+    ]);
+    products = p; checks = Object.fromEntries(c.map(x => [x.code, x]));
+    const meta = Object.fromEntries((m.data || []).map(x => [x.key, x.value]));
+    const stock = products.filter(x => !x.non_stock).length;
+    $("meta").textContent = products.length
+      ? `Warehouse export ${meta.export_date || ""} · ${stock.toLocaleString()} stock products`
+      : "No products yet";
+    const sel = $("sup"), cur = sel.value;
+    sel.innerHTML = `<option value="">All suppliers</option>` + [...new Set(products.map(x => x.supplier).filter(Boolean))].sort().map(s => `<option>${esc(s)}</option>`).join("");
+    sel.value = cur;
+    if (role === "owner") await loadPeople();
+    note("appMsg", !products.length && role === "owner" ? "Start by loading your warehouse export in the Upload tab." : "");
+    render();
+  } catch (err) { note("appMsg", "Couldn't load the inventory: " + (err.message || err), "err"); }
+}
+$("refresh").onclick = loadAll;
+let lastFocus = Date.now();
+window.addEventListener("focus", () => { if (Date.now() - lastFocus > 30000 && !$("vApp").hidden) { lastFocus = Date.now(); loadAll(); } });
+
+function statusOf(p) {
+  const c = checks[p.code];
+  if (!c) return "todo";
+  return Math.abs(Number(c.qty ?? p.physical) - Number(p.physical)) > 0.001 ? "chg" : "ok";
+}
+
+function render() {
+  const q = $("q").value.trim().toLowerCase(), sup = $("sup").value, showNs = $("ns").checked, owner = role === "owner";
+  const stock = products.filter(p => !p.non_stock);
+  let ok = 0, chg = 0;
+  for (const p of stock) { const s = statusOf(p); if (s === "ok") ok++; else if (s === "chg") chg++; }
+  const total = stock.length;
+  $("sVer").innerHTML = `${ok.toLocaleString()} <small>of ${total.toLocaleString()}</small>`;
+  $("sTodo").textContent = (total - ok - chg).toLocaleString();
+  $("sChg").textContent = chg.toLocaleString();
+  const pct = total ? ok / total * 100 : 0;
+  $("sPct").textContent = pct.toFixed(1) + "%"; $("bar").style.width = pct + "%";
+
+  const list = products.filter(p => (showNs || !p.non_stock) && (!sup || p.supplier === sup)
+    && (filter === "all" || statusOf(p) === filter)
+    && (!q || p.code.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q)));
+  $("rows").innerHTML = list.map(p => {
+    const s = statusOf(p), c = checks[p.code];
+    let pill = `<span class="pill none">Not checked</span>`;
+    if (s === "ok") pill = `<span class="pill ok">Accurate</span><span class="when">${fmtDate(c.checked_at)}</span>`;
+    if (s === "chg") pill = `<span class="pill warn">Recheck</span><span class="when">was ${fmt(c.qty)} on ${fmtDate(c.checked_at)}</span>`;
+    if (p.non_stock) pill = `<span class="pill none">Non-stock</span>`;
+    const btn = !owner || p.non_stock ? "" : s === "ok"
+      ? `<button class="act" data-un="${esc(p.code)}">Undo</button>`
+      : `<button class="act primary" data-mk="${esc(p.code)}">Mark accurate</button>`;
+    return `<tr><td class="code">${esc(p.code)}</td><td class="desc">${esc(p.description)}${p.pack ? `<div class="pack">${esc(p.pack)}</div>` : ""}</td>
+      <td class="num ${p.physical < 0 ? "neg" : ""}">${fmt(p.physical)}</td><td>${esc(p.um)}</td><td class="num">${fmt(p.available)}</td>
+      <td class="num">${fmt(p.reserved)}</td><td class="code">${esc(p.supplier)}</td><td>${pill}</td><td>${btn}</td></tr>`;
+  }).join("") || `<tr><td colspan="9" class="meta">${products.length ? "No products match these filters." : "No products loaded yet."}</td></tr>`;
+  $("shown").textContent = `Showing ${list.length.toLocaleString()} of ${products.length.toLocaleString()} lines`;
+}
+$("seg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  filter = b.dataset.f; for (const x of $("seg").children) x.setAttribute("aria-pressed", String(x === b)); render();
+});
+let st; $("q").addEventListener("input", () => { clearTimeout(st); st = setTimeout(render, 120); });
+$("sup").onchange = render; $("ns").onchange = render;
+
+$("rows").addEventListener("click", async e => {
+  const b = e.target.closest("button.act"); if (!b || role !== "owner") return;
+  b.disabled = true;
+  const code = b.dataset.mk || b.dataset.un;
+  const p = products.find(x => x.code === code);
+  const res = b.dataset.mk
+    ? await sb.from("checks").upsert({ code, qty: p.physical, checked_at: new Date().toISOString() }).select().single()
+    : await sb.from("checks").delete().eq("code", code);
+  if (res.error) { b.disabled = false; return note("appMsg", "That didn't save: " + res.error.message, "err"); }
+  if (b.dataset.mk) checks[code] = res.data; else delete checks[code];
+  note("appMsg", ""); render();
+});
+
+// ---------------- Tabs ----------------
+$("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-tab]"); if (!b) return;
+  for (const x of $("tabs").querySelectorAll("button")) { x.setAttribute("aria-selected", String(x === b)); $(x.dataset.tab).hidden = x !== b; }
+});
+
+// ---------------- Spreadsheet reading ----------------
+async function readRows(file) {
+  if (/\.(csv|txt)$/i.test(file.name)) {
+    return (await file.text()).split(/\r?\n/).map(l => l.split(/[,\t;]/).map(s => s.replace(/^"|"$/g, "")));
+  }
+  const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null });
+}
+function headerRow(rows, mustHave) {
+  for (let r = 0; r < Math.min(rows.length, 20); r++) {
+    const h = (rows[r] || []).map(c => String(c ?? "").trim().toLowerCase());
+    if (h.includes(mustHave)) return { r, h };
+  }
+  return null;
+}
+function wireDrop(dropId, inputId, handler) {
+  const d = $(dropId);
+  $(inputId).addEventListener("change", e => { const f = e.target.files[0]; if (f) handler(f); e.target.value = ""; });
+  d.addEventListener("dragover", e => { e.preventDefault(); d.classList.add("over"); });
+  d.addEventListener("dragleave", () => d.classList.remove("over"));
+  d.addEventListener("drop", e => { e.preventDefault(); d.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) handler(f); });
+}
+
+// ---------------- Batch mark accurate ----------------
+let bPending = [];
+function bPrepare(codes, source) {
+  const byCode = new Map(products.map(p => [p.code.toLowerCase(), p]));
+  const seen = new Set(), missing = [], already = [], todo = [];
+  for (const raw of codes) {
+    const c = String(raw ?? "").trim(); if (!c) continue;
+    const k = c.toLowerCase(); if (seen.has(k) || k === "code") continue; seen.add(k);
+    const p = byCode.get(k);
+    if (!p) missing.push(c); else if (p.non_stock) missing.push(c + " (non-stock)");
+    else if (statusOf(p) === "ok") already.push(p); else todo.push(p);
+  }
+  bPending = todo;
+  let h = `<div><strong>${esc(source)}:</strong> ${(todo.length + already.length).toLocaleString()} products found. ${todo.length.toLocaleString()} will be marked accurate${already.length ? `, ${already.length.toLocaleString()} already were` : ""}.</div>`;
+  if (missing.length) h += `<div>${missing.length} code${missing.length > 1 ? "s" : ""} not in the product list:</div><div class="missing">${missing.slice(0, 60).map(esc).join(", ")}${missing.length > 60 ? ` and ${missing.length - 60} more` : ""}</div>`;
+  $("bPrev").innerHTML = h;
+  $("bGo").hidden = !todo.length; $("bGo").disabled = false;
+  $("bGo").textContent = `Mark ${todo.length.toLocaleString()} accurate`;
+}
+wireDrop("bDrop", "bFile", async f => {
+  try {
+    const rows = await readRows(f), hr = headerRow(rows, "code");
+    const col = hr ? hr.h.indexOf("code") : 0, start = hr ? hr.r + 1 : 0;
+    bPrepare(rows.slice(start).map(r => (r || [])[col]), f.name);
+  } catch { $("bPrev").innerHTML = `<div class="missing">Couldn't read ${esc(f.name)}. Save it as .xlsx or .csv and try again.</div>`; $("bGo").hidden = true; }
+});
+let pt; $("bPaste").addEventListener("input", () => { clearTimeout(pt); pt = setTimeout(() => {
+  const v = $("bPaste").value.trim();
+  if (!v) { $("bPrev").innerHTML = ""; $("bGo").hidden = true; return; }
+  bPrepare(v.split(/[\n,;\t]+/), "Pasted list");
+}, 300); });
+$("bGo").onclick = async () => {
+  const at = new Date().toISOString(), rows = bPending.map(p => ({ code: p.code, qty: p.physical, checked_at: at }));
+  $("bGo").disabled = true; $("bGo").textContent = "Saving…";
+  for (let i = 0; i < rows.length; i += 500) {
+    const { error } = await sb.from("checks").upsert(rows.slice(i, i + 500));
+    if (error) { $("bPrev").innerHTML = `<div class="missing">Saved ${i} of ${rows.length}, then stopped: ${esc(error.message)}. Upload the same list again to finish.</div>`; $("bGo").hidden = true; return loadAll(); }
+  }
+  $("bPrev").innerHTML = `<div><strong>${rows.length.toLocaleString()} products marked accurate.</strong></div>`;
+  $("bGo").hidden = true; $("bPaste").value = ""; bPending = []; loadAll();
+};
+
+// ---------------- New warehouse export ----------------
+let ePending = null;
+wireDrop("eDrop", "eFile", async f => {
+  ePending = null; $("eGo").hidden = true;
+  try {
+    const rows = await readRows(f), hr = headerRow(rows, "code");
+    if (!hr || !hr.h.includes("description") || !hr.h.includes("physical")) throw new Error("columns");
+    const col = name => hr.h.indexOf(name);
+    const num = v => { const n = Number(String(v ?? "").replace(/,/g, "")); return isFinite(n) ? Math.round(n * 10000) / 10000 : 0; };
+    let exportDate = "";
+    for (let r = 0; r < hr.r; r++) if (String(rows[r]?.[0] ?? "").toLowerCase().includes("export")) exportDate = String(rows[r][1] ?? "").trim();
+    const seen = new Set(), list = [];
+    for (const r of rows.slice(hr.r + 1)) {
+      const code = String(r?.[col("code")] ?? "").trim(); if (!code || seen.has(code)) continue; seen.add(code);
+      list.push({
+        code, description: String(r[col("description")] ?? "").trim(), physical: num(r[col("physical")]),
+        um: col("um") >= 0 ? String(r[col("um")] ?? "") : null,
+        available: col("available") >= 0 ? num(r[col("available")]) : null,
+        reserved: col("reserved") >= 0 ? num(r[col("reserved")]) : null,
+        pack: col("um desc") >= 0 ? String(r[col("um desc")] ?? "") : null,
+        supplier: col("def. supplier") >= 0 ? String(r[col("def. supplier")] ?? "") : null,
+        non_stock: isNonStock(code), updated_at: new Date().toISOString(),
+      });
+    }
+    if (!list.length) throw new Error("empty");
+    const old = new Map(products.map(p => [p.code, p]));
+    const added = list.filter(p => !old.has(p.code)).length;
+    const removed = products.filter(p => !seen.has(p.code)).map(p => p.code);
+    const recheck = list.filter(p => { const c = checks[p.code], o = old.get(p.code); return c && o && statusOf(o) === "ok" && Math.abs(Number(c.qty) - p.physical) > 0.001; }).length;
+    ePending = { list, removed, exportDate: exportDate || new Date().toLocaleString() };
+    $("ePrev").innerHTML = `<div><strong>${esc(f.name)}:</strong> ${list.length.toLocaleString()} lines${exportDate ? `, exported ${esc(exportDate)}` : ""}.</div>
+      <div>${added.toLocaleString()} new products · ${removed.length.toLocaleString()} no longer in the export (will be removed) · ${recheck.toLocaleString()} checked products whose count changed (will show Recheck)</div>`;
+    $("eGo").hidden = false; $("eGo").disabled = false;
+  } catch (err) {
+    $("ePrev").innerHTML = `<div class="missing">${err.message === "columns" ? "This file doesn't have the Code, Description and Physical columns. Use the full warehouse export." : `Couldn't read ${esc(f.name)}.`}</div>`;
+  }
+});
+$("eGo").onclick = async () => {
+  if (!ePending) return;
+  const { list, removed, exportDate } = ePending;
+  $("eGo").disabled = true; $("eGo").textContent = "Saving…";
+  try {
+    for (let i = 0; i < list.length; i += 500) {
+      const { error } = await sb.from("products").upsert(list.slice(i, i + 500)); if (error) throw error;
+    }
+    for (let i = 0; i < removed.length; i += 200) {
+      const { error } = await sb.from("products").delete().in("code", removed.slice(i, i + 200)); if (error) throw error;
+    }
+    const { error } = await sb.from("meta").upsert([{ key: "export_date", value: exportDate }]); if (error) throw error;
+    $("ePrev").innerHTML = `<div><strong>Product list updated: ${list.length.toLocaleString()} lines.</strong></div>`;
+  } catch (err) {
+    $("ePrev").innerHTML = `<div class="missing">The upload stopped partway: ${esc(err.message)}. Upload the same file again to finish.</div>`;
+  }
+  $("eGo").hidden = true; $("eGo").textContent = "Replace product list"; ePending = null; loadAll();
+};
+
+// ---------------- People ----------------
+async function loadPeople() {
+  profiles = await fetchAll("profiles", "id,email,role,created_at");
+  const pend = profiles.filter(p => p.role === "pending").length;
+  $("pendCount").hidden = !pend; $("pendCount").textContent = pend;
+  const label = { pending: "Waiting", viewer: "Approved", blocked: "Blocked" };
+  $("people").innerHTML = profiles.map(p => `<tr><td>${esc(p.email)}</td><td>${fmtDate(p.created_at)}</td><td>${p.role === "owner" ? "<b>Owner</b>"
+    : `<select data-person="${esc(p.id)}" aria-label="Access for ${esc(p.email)}">${Object.entries(label).map(([v, l]) => `<option value="${v}" ${p.role === v ? "selected" : ""}>${l}</option>`).join("")}</select>`}</td></tr>`).join("")
+    || `<tr><td colspan="3" class="meta">Nobody else has signed up yet.</td></tr>`;
+}
+$("people").addEventListener("change", async e => {
+  const s = e.target.closest("select[data-person]"); if (!s) return;
+  s.disabled = true;
+  const { error } = await sb.from("profiles").update({ role: s.value }).eq("id", s.dataset.person);
+  s.disabled = false;
+  if (error) note("appMsg", "Couldn't change access: " + error.message, "err"); else { note("appMsg", "Access updated.", "ok"); loadPeople(); }
+});
+</script>
+</body>
+</html>
