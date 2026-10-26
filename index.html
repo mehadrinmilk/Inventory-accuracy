@@ -72,7 +72,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .tabs button:hover { color: var(--fg); border-color: var(--line-hi); }
 .tabs button[aria-selected="true"] { color: var(--bg); background: var(--amber); border-color: var(--amber); box-shadow: 0 0 12px rgba(243,180,49,.35); }
 .badge { background: var(--red); color: var(--bg); padding: 0 6px; font-size: .7rem; margin-left: 6px; }
-.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.25fr); gap: 10px; }
+.summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 1.25fr); gap: 10px; }
 .stat { background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); padding: 14px 16px; display: grid; gap: 6px; align-content: start; position: relative; }
 .stat .k { font-size: .66rem; text-transform: uppercase; letter-spacing: .22em; color: var(--muted); }
 .stat .k::before { content: "// "; color: var(--cyan-dim); }
@@ -136,7 +136,7 @@ textarea { font-size: .85rem; min-height: 120px; resize: vertical; }
 .missing { font-size: .8rem; color: var(--red); word-break: break-word; }
 .foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
 .ro { font-size: .68rem; color: var(--amber); border: 1px solid var(--amber); padding: 3px 10px; letter-spacing: .2em; text-transform: uppercase; }
-@media (max-width: 860px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 860px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .summary .stat:last-child { grid-column: span 2; } }
 @media (max-width: 720px) { .two { grid-template-columns: 1fr; } h1 { font-size: 1.4rem; letter-spacing: .08em; } .stat .v { font-size: 1.9rem; } .gauge svg { width: 72px; height: 72px; } }
 
 /* ===== Motion layer ===== */
@@ -337,7 +337,6 @@ tbody tr.flash td { animation: rowFlash 1.4s ease-out; }
       <section class="summary" aria-label="Progress">
         <div class="stat hud"><span class="shine"></span><span class="k">Verified accurate</span><span class="v" id="sVer">–</span><div class="seg-bar" id="segBar"></div></div>
         <div class="stat"><span class="shine"></span><span class="k">Not checked yet</span><span class="v" id="sTodo">–</span></div>
-        <div class="stat warn"><span class="shine"></span><span class="k">Needs recheck</span><span class="v" id="sChg">–</span><span class="meta" style="font-size:.66rem">Count moved since it was checked</span></div>
         <div class="stat hud"><span class="shine"></span><span class="k">Accuracy progress</span>
           <div class="gauge">
             <svg viewBox="0 0 100 100" aria-hidden="true">
@@ -357,7 +356,6 @@ tbody tr.flash td { animation: rowFlash 1.4s ease-out; }
           <button data-f="all" aria-pressed="true">All</button>
           <button data-f="todo" aria-pressed="false">Not checked</button>
           <button data-f="ok" aria-pressed="false">Verified</button>
-          <button data-f="chg" aria-pressed="false">Needs recheck</button>
         </div>
         <input type="search" id="q" placeholder="Search code, product or supplier" aria-label="Search products">
         <select id="sup" aria-label="Supplier"><option value="">All suppliers</option></select>
@@ -372,7 +370,7 @@ tbody tr.flash td { animation: rowFlash 1.4s ease-out; }
         </table>
       </div>
       </div>
-      <div class="foot"><span id="shown"></span><span>A check records the physical count at the moment it was confirmed.</span></div>
+      <div class="foot"><span id="shown"></span><span>Verified products stay verified until you undo them.</span></div>
     </div>
 
     <!-- Upload (owner) -->
@@ -393,7 +391,7 @@ tbody tr.flash td { animation: rowFlash 1.4s ease-out; }
 
       <section class="card">
         <h2>Load a new warehouse export</h2>
-        <p class="meta" style="margin:0">Upload the full product export (.xlsx) to replace the product list and counts. Checks you've already made are kept. Any product whose count changed since you checked it will show "Recheck".</p>
+        <p class="meta" style="margin:0">Upload the full product export (.xlsx) to replace the product list and counts. Products you've already verified stay verified.</p>
         <label class="drop" id="eDrop" for="eFile">
           <span><strong>Drop the export here</strong> or click to choose it</span>
           <span>Needs the columns Code, Description and Physical</span>
@@ -776,13 +774,13 @@ window.addEventListener("focus", () => { if (Date.now() - lastFocus > 30000 && !
 function statusOf(p) {
   const c = checks[p.code];
   if (!c) return "todo";
-  return Math.abs(Number(c.qty ?? p.physical) - Number(p.physical)) > 0.001 ? "chg" : "ok";
+  return "ok";
 }
 
 let countDur = 1800;                                    // long count on first load / sign-in
 function resetCounters() {
   countDur = 1800;
-  for (const id of ["sVer", "sTodo", "sChg", "sPct"]) { const el = $(id); el.dataset.n = 0; el.textContent = id === "sPct" ? "0.00%" : "0"; }
+  for (const id of ["sVer", "sTodo", "sPct"]) { const el = $(id); el.dataset.n = 0; el.textContent = id === "sPct" ? "0.00%" : "0"; }
   setGauge(0);
 }
 function setGauge(pct) {
@@ -814,14 +812,13 @@ function countTo(el, value, { suffix = "", dec = 0, onStep = null } = {}) {
 function render() {
   const q = $("q").value.trim().toLowerCase(), sup = $("sup").value, showNs = $("ns").checked, owner = role === "owner";
   const stock = products.filter(p => !p.non_stock);
-  let ok = 0, chg = 0;
-  for (const p of stock) { const s = statusOf(p); if (s === "ok") ok++; else if (s === "chg") chg++; }
+  let ok = 0;
+  for (const p of stock) if (statusOf(p) === "ok") ok++;
   const total = stock.length;
   if (!$("decode").hidden) { /* hold the count-up until the sign-in screen clears */ }
   else {
     countTo($("sVer"), ok, { suffix: ` <small>of ${total.toLocaleString()}</small>` });
-    countTo($("sTodo"), total - ok - chg);
-    countTo($("sChg"), chg);
+    countTo($("sTodo"), total - ok);
     const pct = total ? Math.round(ok / total * 10000) / 100 : 0;
     countTo($("sPct"), pct, { suffix: "%", dec: 2, onStep: setGauge });
     if (products.length) setTimeout(() => { countDur = 700; }, 50);
@@ -834,7 +831,6 @@ function render() {
     const s = statusOf(p), c = checks[p.code];
     let pill = `<span class="pill none">Not checked</span>`;
     if (s === "ok") pill = `<span class="pill ok">Accurate</span><span class="when">${fmtDate(c.checked_at)}</span>`;
-    if (s === "chg") pill = `<span class="pill warn">Recheck</span><span class="when">was ${fmt(c.qty)} on ${fmtDate(c.checked_at)}</span>`;
     if (p.non_stock) pill = `<span class="pill none">Non-stock</span>`;
     const btn = !owner || p.non_stock ? "" : s === "ok"
       ? `<button class="act" data-un="${esc(p.code)}">Undo</button>`
@@ -964,10 +960,9 @@ wireDrop("eDrop", "eFile", async f => {
     const old = new Map(products.map(p => [p.code, p]));
     const added = list.filter(p => !old.has(p.code)).length;
     const removed = products.filter(p => !seen.has(p.code)).map(p => p.code);
-    const recheck = list.filter(p => { const c = checks[p.code], o = old.get(p.code); return c && o && statusOf(o) === "ok" && Math.abs(Number(c.qty) - p.physical) > 0.001; }).length;
     ePending = { list, removed, exportDate: exportDate || new Date().toLocaleString() };
     $("ePrev").innerHTML = `<div><strong>${esc(f.name)}:</strong> ${list.length.toLocaleString()} lines${exportDate ? `, exported ${esc(exportDate)}` : ""}.</div>
-      <div>${added.toLocaleString()} new products · ${removed.length.toLocaleString()} no longer in the export (will be removed) · ${recheck.toLocaleString()} checked products whose count changed (will show Recheck)</div>`;
+      <div>${added.toLocaleString()} new products · ${removed.length.toLocaleString()} no longer in the export (will be removed)</div>`;
     $("eGo").hidden = false; $("eGo").disabled = false;
   } catch (err) {
     $("ePrev").innerHTML = `<div class="missing">${err.message === "columns" ? "This file doesn't have the Code, Description and Physical columns. Use the full warehouse export." : `Couldn't read ${esc(f.name)}.`}</div>`;
@@ -995,7 +990,7 @@ $("eGo").onclick = async () => {
 // ---------------- Download current status ----------------
 $("dl").onclick = () => {
   if (!window.XLSX) return note("appMsg", "The download tool didn't load. Reload the page and try again.", "err");
-  const label = { ok: "Accurate", chg: "Needs recheck", todo: "Not checked" };
+  const label = { ok: "Accurate", todo: "Not checked" };
   const stock = products.filter(p => !p.non_stock);
   const rows = stock.map(p => {
     const c = checks[p.code], s = statusOf(p);
@@ -1004,22 +999,21 @@ $("dl").onclick = () => {
       "Supplier": supName(p.supplier) || "", "Supplier code": p.supplier || "",
       "Physical": Number(p.physical), "UM": p.um || "", "Available": p.available == null ? "" : Number(p.available), "Reserved": p.reserved == null ? "" : Number(p.reserved),
       "Status": label[s], "Checked on": c ? new Date(c.checked_at).toLocaleDateString("en-CA") : "",
-      "Count when checked": c ? Number(c.qty) : "",
     };
   });
-  const ok = rows.filter(r => r.Status === "Accurate").length, chg = rows.filter(r => r.Status === "Needs recheck").length;
+  const ok = rows.filter(r => r.Status === "Accurate").length;
   const today = new Date().toLocaleDateString("en-CA");
   const summary = [
     ["Inventory Accuracy status"], [],
     ["Downloaded", new Date().toLocaleString()], ["Warehouse export", $("meta").textContent],
-    [], ["Stock products", rows.length], ["Accurate", ok], ["Needs recheck", chg], ["Not checked", rows.length - ok - chg],
+    [], ["Stock products", rows.length], ["Accurate", ok], ["Not checked", rows.length - ok],
     ["Percent accurate", rows.length ? Math.round(ok / rows.length * 10000) / 100 + "%" : "0%"],
   ];
   const wb = XLSX.utils.book_new();
   const ws1 = XLSX.utils.aoa_to_sheet(summary); ws1["!cols"] = [{ wch: 22 }, { wch: 40 }];
   const ws2 = XLSX.utils.json_to_sheet(rows);
-  ws2["!cols"] = [10, 46, 14, 26, 14, 10, 6, 10, 10, 14, 12, 18].map(w => ({ wch: w }));
-  ws2["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: 11 } }) };
+  ws2["!cols"] = [10, 46, 14, 26, 14, 10, 6, 10, 10, 14, 12].map(w => ({ wch: w }));
+  ws2["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: 10 } }) };
   XLSX.utils.book_append_sheet(wb, ws1, "Summary");
   XLSX.utils.book_append_sheet(wb, ws2, "Products");
   XLSX.writeFile(wb, `inventory-accuracy-${today}.xlsx`);
