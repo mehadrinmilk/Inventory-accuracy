@@ -18,7 +18,7 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html { background: var(--bg); }
+html { background: var(--bg); scrollbar-gutter: stable; }
 body { margin: 0; color: var(--fg); font: 14px/1.45 var(--mono); min-height: 100vh;
   background:
     radial-gradient(ellipse at 50% -10%, rgba(63,227,246,.08), transparent 60%),
@@ -98,7 +98,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .seg button { border: 0; background: transparent; color: var(--muted); padding: 8px 12px; border-right: 1px solid var(--line); font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; }
 .seg button:last-child { border-right: 0; }
 .seg button[aria-pressed="true"] { background: rgba(63,227,246,.14); color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
-.tablebox { overflow-x: auto; background: rgba(8,18,26,.85); border: 1px solid var(--line); position: relative; }
+.tablebox { overflow-x: auto; overflow-y: hidden; background: rgba(8,18,26,.85); border: 1px solid var(--line); }
+.tablewrap { position: relative; min-width: 0; }
 table { border-collapse: collapse; width: 100%; min-width: 880px; }
 th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid rgba(18,53,67,.7); vertical-align: middle; }
 th { background: var(--panel-2); font-size: .66rem; text-transform: uppercase; letter-spacing: .2em; color: var(--amber); font-weight: 400; border-bottom: 1px solid var(--line-hi); }
@@ -143,12 +144,12 @@ body::before { content: ""; position: fixed; left: 0; right: 0; top: 0; height: 
   animation: sweep 11s cubic-bezier(.45,.05,.55,.95) infinite; }
 @keyframes sweep { from { transform: translateY(-340px); } to { transform: translateY(110vh); } }
 /* boot-up: everything slides in once, resting state is fully visible */
-#vApp > *, .narrow { animation: bootIn .6s cubic-bezier(.2,.8,.2,1) both; }
-#vApp > *:nth-child(2) { animation-delay: .08s; } #vApp > *:nth-child(3) { animation-delay: .14s; }
-#vApp > *:nth-child(4) { animation-delay: .2s; } #vApp > *:nth-child(5) { animation-delay: .26s; }
+#vApp.booting > *, .narrow { animation: bootIn .6s cubic-bezier(.2,.8,.2,1) both; }
+#vApp.booting > *:nth-child(2) { animation-delay: .08s; } #vApp.booting > *:nth-child(3) { animation-delay: .14s; }
+#vApp.booting > *:nth-child(4) { animation-delay: .2s; } #vApp.booting > *:nth-child(5) { animation-delay: .26s; }
 @keyframes bootIn { from { opacity: 0; transform: translateY(10px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
-.summary .stat { animation: bootIn .6s both, edgeGlow 3.2s ease-in-out infinite alternate; }
-.summary .stat:nth-child(2) { animation-delay: .1s, .8s; } .summary .stat:nth-child(3) { animation-delay: .2s, 1.6s; } .summary .stat:nth-child(4) { animation-delay: .3s, 2.4s; }
+.summary .stat { animation: edgeGlow 3.2s ease-in-out infinite alternate; }
+.summary .stat:nth-child(2) { animation-delay: .8s; } .summary .stat:nth-child(3) { animation-delay: 1.6s; } .summary .stat:nth-child(4) { animation-delay: 2.4s; }
 @keyframes edgeGlow { from { border-color: var(--line); box-shadow: none; } to { border-color: var(--line-hi); box-shadow: 0 0 18px rgba(63,227,246,.08), inset 0 0 22px rgba(63,227,246,.05); } }
 .stat > .shine { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .stat > .shine::before { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%;
@@ -359,11 +360,13 @@ tbody tr.flash td { animation: rowFlash 1.4s ease-out; }
         <select id="sup" aria-label="Supplier"><option value="">All suppliers</option></select>
         <label class="meta"><input type="checkbox" id="ns"> Show non-stock lines</label>
       </div>
-      <div class="tablebox hud">
+      <div class="tablewrap hud">
+      <div class="tablebox">
         <table>
           <thead><tr><th>Code</th><th>Product</th><th class="num">Physical</th><th>UM</th><th class="num">Available</th><th class="num">Reserved</th><th>Supplier</th><th>Status</th><th></th></tr></thead>
           <tbody id="rows"><tr><td colspan="9" class="meta">Loading products…</td></tr></tbody>
         </table>
+      </div>
       </div>
       <div class="foot"><span id="shown"></span><span>A check records the physical count at the moment it was confirmed.</span></div>
     </div>
@@ -693,6 +696,7 @@ async function route() {
   const { data, error } = await sb.from("profiles").select("role").eq("id", me.id).maybeSingle();
   role = error ? null : data?.role;
   if (role === "owner" || role === "viewer") {
+    if ($("vApp").hidden) { $("vApp").classList.add("booting"); setTimeout(() => $("vApp").classList.remove("booting"), 1200); }
     show("vApp");
     $("whoEmail").textContent = me.email;
     $("roTag").hidden = role === "owner";
@@ -762,18 +766,23 @@ function setGauge(pct) {
 }
 function countTo(el, value, { suffix = "", dec = 0, onStep = null } = {}) {
   const from = Number(el.dataset.n ?? 0);
-  if (from === value && el.dataset.n != null) return;
-  el.dataset.n = value;
+  if (from === value && el.dataset.n != null) {
+    if (el.dataset.sfx !== suffix && el.dataset.busy !== "1") { el.dataset.sfx = suffix; if (suffix.includes("<")) el.innerHTML = (dec ? value.toFixed(dec) : value.toLocaleString()) + suffix; else el.textContent = (dec ? value.toFixed(dec) : value.toLocaleString()) + suffix; }
+    else el.dataset.sfx = suffix;
+    return;
+  }
+  el.dataset.n = value; el.dataset.sfx = suffix;
   const fmtN = v => dec ? v.toFixed(dec) : Math.round(v).toLocaleString();
-  const put = v => { if (suffix.includes("<")) el.innerHTML = fmtN(v) + suffix; else el.textContent = fmtN(v) + suffix; if (onStep) onStep(v); };
+  const put = v => { const sf = el.dataset.sfx ?? suffix; if (sf.includes("<")) el.innerHTML = fmtN(v) + sf; else el.textContent = fmtN(v) + sf; if (onStep) onStep(v); };
   if (reduceMotion) { put(value); return; }
   const t0 = performance.now(), dur = countDur;
   el.classList.remove("tick"); void el.offsetWidth; el.classList.add("tick");
+  el.dataset.busy = "1";
   const step = t => {
     if (el.dataset.n != value) return;
     const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
     put(from + (value - from) * e);
-    if (k < 1) requestAnimationFrame(step);
+    if (k < 1) requestAnimationFrame(step); else { el.dataset.busy = "0"; put(Number(el.dataset.n)); }
   };
   requestAnimationFrame(step);
 }
