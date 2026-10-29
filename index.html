@@ -86,7 +86,7 @@ input, select, textarea { font: inherit; color: var(--fg); }
 .msg.ok { background: var(--ok-50); color: var(--ok); }
 
 /* ---------- app bar ---------- */
-.appbar { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: saturate(1.4) blur(12px);
+.appbar { position: relative; z-index: 30; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: saturate(1.4) blur(12px);
   border-bottom: 1px solid var(--line); }
 .appbar .in { max-width: 1320px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .appbar .logo { width: 104px; flex: none; }
@@ -165,9 +165,9 @@ input, select, textarea { font: inherit; color: var(--fg); }
 .chip button:hover { background: var(--red); color: #fff; }
 
 /* ---------- table ---------- */
-.tablebox { overflow: auto; max-height: min(72vh, 900px); border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
 table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 960px; }
-thead th { position: sticky; top: 0; z-index: 2; background: var(--surface-2); text-align: left; font-size: .72rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted);
+thead th { background: var(--surface-2); text-align: left; font-size: .72rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted);
   border-bottom: 1px solid var(--line); padding: 0; white-space: nowrap; }
 .th { display: flex; align-items: center; gap: 0; padding: 8px 4px 8px 10px; }
 th.num .th { justify-content: flex-end; }
@@ -258,6 +258,9 @@ textarea:focus { outline: none; border-color: var(--blue); }
 .people select { border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 9px; padding: 6px 8px; }
 .people table { min-width: 520px; }
 
+/* ---------- confetti ---------- */
+#confetti { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 90; pointer-events: none; }
+
 /* ---------- toasts ---------- */
 #toasts { position: fixed; right: 20px; bottom: 20px; z-index: 80; display: grid; gap: 8px; }
 .toast { background: var(--blue-900); color: #fff; border-radius: 12px; padding: 12px 16px; box-shadow: var(--shadow-lg); font-weight: 600; font-size: .92rem; display: flex; gap: 10px; align-items: center;
@@ -281,7 +284,9 @@ textarea:focus { outline: none; border-color: var(--blue); }
 #trans.leave .t-center { opacity: 0; transition-delay: 0s; }
 .t-badge { background: #fff; border-radius: 22px; padding: 14px 20px; box-shadow: 0 20px 50px rgba(0,0,0,.3); animation: float 3s ease-in-out infinite; }
 .t-badge .logo { width: 220px; }
-.t-text { font: 700 1.5rem var(--display); letter-spacing: .01em; min-height: 1.4em; font-variant-numeric: tabular-nums; }
+.t-text { font: 700 1.5rem var(--display); letter-spacing: .01em; min-height: 1.4em; }
+.t-text.swap { animation: textIn .45s cubic-bezier(.2,.8,.2,1); }
+@keyframes textIn { from { opacity: 0; transform: translateY(8px); } }
 .t-bar { width: 240px; height: 5px; border-radius: 99px; background: rgba(255,255,255,.25); overflow: hidden; }
 .t-bar i { display: block; height: 100%; width: 0; background: #fff; border-radius: inherit; transition: width .25s; }
 #trans.denied .t-bar i { background: #ffb3b8; }
@@ -312,6 +317,7 @@ textarea:focus { outline: none; border-color: var(--blue); }
   </div>
 </div>
 <div id="toasts" aria-live="polite"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
 
 <!-- ============ Auth screens ============ -->
 <div id="authShell" hidden>
@@ -467,7 +473,7 @@ textarea:focus { outline: none; border-color: var(--blue); }
     <section class="card people" id="tPeople" hidden>
       <h3>People</h3>
       <p class="hint">Anyone can create an account, but they see nothing until you set them to <b>Approved</b>.</p>
-      <div class="tablebox" style="max-height:none"><table><thead><tr><th><div class="th">Email</div></th><th><div class="th">Signed up</div></th><th><div class="th">Access</div></th></tr></thead><tbody id="people"></tbody></table></div>
+      <div class="tablebox"><table><thead><tr><th><div class="th">Email</div></th><th><div class="th">Signed up</div></th><th><div class="th">Access</div></th></tr></thead><tbody id="people"></tbody></table></div>
     </section>
   </div>
 </div>
@@ -515,36 +521,64 @@ const supKey = c => String(c ?? "").trim().replace(/^0+(?=\d)/, "").toLowerCase(
 const supName = c => suppliers[supKey(c)] || "";
 let me = null, role = null, products = [], checks = {}, profiles = [], statusFilter = "all", recovering = false, loaded = false, exportInfo = {};
 
+// ================= Confetti =================
+const confetti = (() => {
+  const cv = $("confetti"), cx = cv.getContext("2d");
+  const COLORS = ["#2c6cb4", "#ed1f2c", "#ffffff", "#7fb2ea", "#163e73", "#ffd166"];
+  let parts = [], raf = 0, last = 0, dpr = 1;
+  function size() { dpr = Math.min(devicePixelRatio || 1, 2); cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+  function frame(t) {
+    const dt = Math.min(.033, (t - last) / 1000); last = t;
+    cx.clearRect(0, 0, innerWidth, innerHeight);
+    parts = parts.filter(p => p.life > 0 && p.y < innerHeight + 40);
+    for (const p of parts) {
+      p.vy += 900 * dt; p.vx *= .985; p.vy *= .985;
+      p.x += p.vx * dt; p.y += p.vy * dt; p.rot += p.vr * dt; p.life -= dt;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.rot); cx.globalAlpha = Math.min(1, p.life * 1.5);
+      cx.fillStyle = p.c;
+      if (p.c === "#ffffff") { cx.strokeStyle = "rgba(44,108,180,.5)"; cx.lineWidth = .8; }
+      if (p.round) { cx.beginPath(); cx.arc(0, 0, p.s / 2, 0, Math.PI * 2); cx.fill(); if (p.c === "#ffffff") cx.stroke(); }
+      else { const h = p.s * .55 * Math.abs(Math.cos(p.rot * 2)) + 1; cx.fillRect(-p.s / 2, -h / 2, p.s, h); if (p.c === "#ffffff") cx.strokeRect(-p.s / 2, -h / 2, p.s, h); }
+      cx.restore();
+    }
+    if (parts.length) raf = requestAnimationFrame(frame); else { cx.clearRect(0, 0, innerWidth, innerHeight); raf = 0; }
+  }
+  addEventListener("resize", size); size();
+  return function burst(x, y, n = 70, spread = 1, angle = -Math.PI / 2) {
+    if (reduceMotion) return;
+    for (let i = 0; i < n; i++) {
+      const a = angle + (Math.random() - .5) * Math.PI * .9 * spread, v = 380 + Math.random() * 520;
+      parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, rot: Math.random() * 6, vr: (Math.random() - .5) * 14,
+        s: 6 + Math.random() * 7, c: COLORS[Math.random() * COLORS.length | 0], round: Math.random() < .3, life: 1.6 + Math.random() * .9 });
+    }
+    if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); }
+  };
+})();
+function bigConfetti() {
+  confetti(0, innerHeight, 120, .7, -Math.PI / 3);
+  confetti(innerWidth, innerHeight, 120, .7, -Math.PI * 2 / 3);
+  setTimeout(() => confetti(innerWidth / 2, innerHeight * .35, 90, 2), 250);
+}
+
 // ================= Transition (sign in / sign out) =================
-const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-function scrambleTo(el, text, dur = 700) {
-  if (reduceMotion) { el.textContent = text; return Promise.resolve(); }
-  return new Promise(res => {
-    const t0 = performance.now();
-    const step = t => {
-      const k = Math.min(1, (t - t0) / dur), n = Math.floor(text.length * k);
-      el.textContent = text.slice(0, n) + Array.from(text.slice(n), c => c === " " ? " " : GLYPHS[Math.random() * GLYPHS.length | 0]).join("");
-      if (k < 1) requestAnimationFrame(step); else { el.textContent = text; res(); }
-    };
-    requestAnimationFrame(step);
-  });
+function setText(el, text) {               // soft cross-fade, no letter scrambling
+  el.classList.remove("swap"); void el.offsetWidth; el.textContent = text; el.classList.add("swap");
 }
 const trans = (() => {
-  const box = $("trans"); let timer = 0, prog = 0, loop = 0;
+  const box = $("trans"); let timer = 0, prog = 0;
   return {
     async start(text) {
       box.className = ""; box.hidden = false; prog = 0; $("tBar").style.width = "0%"; $("tText").textContent = "";
       void box.offsetWidth; box.classList.add("on");
       clearInterval(timer); timer = setInterval(() => { prog = Math.min(90, prog + 3 + Math.random() * 8); $("tBar").style.width = prog + "%"; }, 160);
       await sleep(reduceMotion ? 0 : 450);
-      await scrambleTo($("tText"), text, 650);
-      clearInterval(loop); loop = setInterval(() => { scrambleTo($("tText"), text, 500); }, 1400);
+      setText($("tText"), text + "…");
     },
     async finish(text, ok = true) {
-      clearInterval(timer); clearInterval(loop);
+      clearInterval(timer);
       if (!ok) box.classList.add("denied");
       $("tBar").style.width = "100%";
-      await scrambleTo($("tText"), text, 500); await sleep(reduceMotion ? 300 : 700);
+      setText($("tText"), text); await sleep(reduceMotion ? 300 : 900);
       box.classList.add("leave"); await sleep(reduceMotion ? 0 : 720);
       box.hidden = true; box.className = "";
     },
@@ -937,7 +971,9 @@ document.addEventListener("mousedown", e => {
 document.addEventListener("keydown", e => { if (e.key === "Escape") { closeFilter(); toggleDl(false); } });
 window.addEventListener("resize", closeFilter);
 let fpOpened = 0;
-$("rows").closest(".tablebox").addEventListener("scroll", () => { if (Date.now() - fpOpened > 400) closeFilter(); }, { passive: true });
+const scrollClose = () => { if (Date.now() - fpOpened > 400) closeFilter(); };
+$("rows").closest(".tablebox").addEventListener("scroll", scrollClose, { passive: true });
+window.addEventListener("scroll", scrollClose, { passive: true });
 
 // ---- verify / undo ----
 $("rows").addEventListener("click", async e => {
@@ -948,7 +984,10 @@ $("rows").addEventListener("click", async e => {
     ? await sb.from("checks").upsert({ code, qty: p.physical, checked_at: new Date().toISOString() }).select().single()
     : await sb.from("checks").delete().eq("code", code);
   if (res.error) { b.disabled = false; return toast("Didn't save: " + res.error.message, "err"); }
-  if (b.dataset.mk) { checks[code] = res.data; justMarked = code; setTimeout(() => { justMarked = null; }, 1700); }
+  if (b.dataset.mk) {
+    const r = b.getBoundingClientRect(); confetti(r.left + r.width / 2, r.top + r.height / 2);
+    checks[code] = res.data; justMarked = code; setTimeout(() => { justMarked = null; }, 1700);
+  }
   else { delete checks[code]; toast(`${code} set back to not checked`); }
   render();
 });
@@ -1057,7 +1096,7 @@ $("bGo").onclick = async () => {
     if (error) { $("bPrev").innerHTML = `<div class="missing">Saved ${i} of ${rows.length}, then stopped: ${esc(error.message)}. Upload the same list again to finish.</div>`; $("bGo").hidden = true; return loadAll(); }
   }
   $("bPrev").innerHTML = `<div><strong>${rows.length.toLocaleString()} products marked accurate.</strong></div>`;
-  toast(`${rows.length.toLocaleString()} products marked accurate`);
+  toast(`${rows.length.toLocaleString()} products marked accurate`); bigConfetti();
   $("bGo").hidden = true; $("bPaste").value = ""; bPending = []; loadAll();
 };
 
