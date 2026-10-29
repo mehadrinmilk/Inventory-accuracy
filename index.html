@@ -88,7 +88,7 @@ input, select, textarea { font: inherit; color: var(--fg); }
 /* ---------- app bar ---------- */
 .appbar { position: relative; z-index: 30; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: saturate(1.4) blur(12px);
   border-bottom: 1px solid var(--line); }
-.appbar .in { max-width: 1320px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.appbar .in { max-width: 1680px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .appbar .logo { width: 104px; flex: none; }
 .appbar .ttl { font: 700 1rem var(--display); letter-spacing: -.01em; white-space: nowrap; }
 .appbar .ttl small { display: block; font: 500 .75rem var(--body); color: var(--muted); }
@@ -113,7 +113,7 @@ input, select, textarea { font: inherit; color: var(--fg); }
 /* ---------- hero ---------- */
 .hero { position: relative; overflow: hidden; color: #fff; background: radial-gradient(90% 140% at 85% 0%, #3d86d4 0%, var(--blue) 40%, var(--blue-800) 100%); }
 .hero::before { content: ""; position: absolute; right: -8%; top: -60px; width: 46%; height: 120px; background: var(--red); border-radius: 0 0 0 100% / 0 0 0 100%; box-shadow: -10px 10px 0 rgba(255,255,255,.9); opacity: .95; }
-.hero .in { position: relative; max-width: 1320px; margin: 0 auto; padding: 34px 20px 92px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: center; }
+.hero .in { position: relative; max-width: 1680px; margin: 0 auto; padding: 34px 20px 92px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: center; }
 .hero .waves { bottom: -1px; }
 .ring { position: relative; width: 168px; height: 168px; }
 .ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -136,7 +136,7 @@ input, select, textarea { font: inherit; color: var(--fg); }
 @media (max-width: 620px) { .kpis { grid-template-columns: 1fr 1fr; } .kpis .kpi:last-child { grid-column: span 2; } .kpi .v { font-size: 1.7rem; } }
 
 /* ---------- main ---------- */
-.main { max-width: 1320px; margin: -56px auto 0; padding: 0 20px 48px; position: relative; display: grid; gap: 18px; }
+.main { max-width: 1680px; margin: -56px auto 0; padding: 0 20px 48px; position: relative; display: grid; gap: 18px; }
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; display: grid; gap: 14px; min-width: 0; }
 .card h3 { font: 700 1.1rem var(--display); margin: 0; letter-spacing: -.01em; }
 .card .hint { color: var(--muted); margin: -6px 0 0; font-size: .92rem; }
@@ -166,6 +166,13 @@ input, select, textarea { font: inherit; color: var(--fg); }
 
 /* ---------- table ---------- */
 .tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+/* Freeze panes: on screens wide enough for the whole table, the column titles stay pinned to the top while the page scrolls */
+@media (min-width: 1300px) {
+  #tTrack .tablebox { overflow: visible; }
+  #tTrack thead th { position: sticky; top: 0; z-index: 5; box-shadow: 0 1px 0 var(--line), 0 6px 12px -8px rgba(14,42,79,.25); }
+  #tTrack thead th:first-child { border-top-left-radius: 13px; }
+  #tTrack thead th:last-child { border-top-right-radius: 13px; }
+}
 table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 960px; }
 thead th { background: var(--surface-2); text-align: left; font-size: .72rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted);
   border-bottom: 1px solid var(--line); padding: 0; white-space: nowrap; }
@@ -195,7 +202,7 @@ td.sup { min-width: 120px; }
 .pill.ok { background: var(--ok-50); color: var(--ok); }
 .pill.no { background: var(--surface-2); color: var(--muted); border: 1px dashed var(--line-2); }
 .pill svg { flex: none; }
-td.date { white-space: nowrap; color: var(--muted); font-size: .88rem; }
+td.date { white-space: nowrap; color: var(--muted); font-size: .88rem; min-width: 118px; }
 .stcell { display: flex; align-items: center; gap: 8px; justify-content: space-between; min-width: 178px; }
 .act { border: 1.5px solid var(--blue); background: var(--surface); color: var(--blue); border-radius: 10px; padding: 6px 12px; font-weight: 700; font-size: .84rem; white-space: nowrap; transition: background .15s, color .15s, transform .15s; }
 .act:hover:not(:disabled) { background: var(--blue); color: #fff; transform: translateY(-1px); }
