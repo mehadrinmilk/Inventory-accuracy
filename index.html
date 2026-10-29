@@ -3,435 +3,476 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inventory Accuracy</title>
+<title>Mehadrin · Inventory Accuracy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-/* HUD control-panel look: black field, cyan line work, amber callouts, mono data. */
+/* Mehadrin Inventory Accuracy. Brand: Mehadrin blue + red ribbon on milk white. Motion: slow logo waves. */
 :root {
-  --bg: #04080c; --panel: #08121a; --panel-2: #0b1923; --line: #123543; --line-hi: #1d6c80;
-  --fg: #cfeaf0; --muted: #5d8894; --cyan: #3fe3f6; --cyan-dim: #1b8fa3; --cyan-glow: rgba(63,227,246,.35);
-  --amber: #f3b431; --amber-soft: rgba(243,180,49,.12); --red: #ff5b4f; --red-soft: rgba(255,91,79,.12);
-  --ok: var(--cyan); --ok-soft: rgba(63,227,246,.1);
-  --display: "Rajdhani", "Arial Narrow", system-ui, sans-serif;
-  --mono: "Share Tech Mono", "JetBrains Mono", ui-monospace, Menlo, monospace;
-  color-scheme: dark;
+  --blue: #2c6cb4; --blue-600: #23599a; --blue-800: #163e73; --blue-900: #0e2a4f; --blue-50: #eaf2fb; --blue-100: #d6e5f6;
+  --red: #ed1f2c; --red-50: #fdecee;
+  --bg: #f3f6fb; --surface: #ffffff; --surface-2: #f7f9fd; --fg: #11233d; --muted: #5d6f8a; --line: #dfe7f1; --line-2: #c9d6e6;
+  --ok: #138a55; --ok-50: #e3f5ec; --shadow: 0 1px 2px rgba(14,42,79,.06), 0 8px 24px rgba(14,42,79,.06);
+  --shadow-lg: 0 18px 50px rgba(14,42,79,.18);
+  --display: "Sora", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --r: 14px;
+  color-scheme: light;
 }
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #0a1626; --surface: #0f2036; --surface-2: #132841; --fg: #e8f0fb; --muted: #94a8c4; --line: #1d3553; --line-2: #2a4a70;
+  --blue-50: #142c4b; --blue-100: #1b3a61; --red-50: #3a1519; --ok: #4fd194; --ok-50: #10301f;
+  --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25); --shadow-lg: 0 18px 50px rgba(0,0,0,.5);
+  color-scheme: dark; } }
 * { box-sizing: border-box; }
 html { background: var(--bg); scrollbar-gutter: stable; }
-body { margin: 0; color: var(--fg); font: 14px/1.45 var(--mono); min-height: 100vh;
-  background:
-    radial-gradient(ellipse at 50% -10%, rgba(63,227,246,.08), transparent 60%),
-    linear-gradient(rgba(29,108,128,.07) 1px, transparent 1px) 0 0 / 32px 32px,
-    linear-gradient(90deg, rgba(29,108,128,.07) 1px, transparent 1px) 0 0 / 32px 32px,
-    var(--bg); }
-body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50;
-  background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); -webkit-font-smoothing: antialiased; }
 [hidden] { display: none !important; }
-.wrap { max-width: 1280px; margin: 0 auto; padding: 22px 16px 48px; display: grid; gap: 18px; }
-h1 { font-family: var(--display); font-weight: 700; font-size: 1.9rem; letter-spacing: .12em; text-transform: uppercase; margin: 0; color: var(--fg); }
-h1::before { content: "\25C7  "; color: var(--cyan); }
-h2 { font-family: var(--mono); font-size: .8rem; margin: 0; font-weight: 400; letter-spacing: .2em; text-transform: uppercase; color: var(--amber); }
-h2::before { content: "\25A0  "; color: var(--amber); }
-.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; padding-bottom: 12px;
-  border-bottom: 1px solid var(--line-hi); position: relative; }
-.top::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; height: 4px;
-  background: repeating-linear-gradient(90deg, var(--line-hi) 0 1px, transparent 1px 12px); }
-.ticker { display: flex; gap: 18px; flex-wrap: wrap; font-size: .7rem; color: var(--muted); letter-spacing: .15em; margin-top: 6px; }
-.ticker b { color: var(--cyan); font-weight: 400; }
-.ticker .live::before { content: ""; display: inline-block; width: 6px; height: 6px; background: var(--cyan); margin-right: 6px; box-shadow: 0 0 8px var(--cyan); animation: blink 1.6s steps(2) infinite; }
-@keyframes blink { 50% { opacity: .2; } }
-.who { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .78rem; flex-wrap: wrap; letter-spacing: .05em; }
-.meta { color: var(--muted); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
-.card { background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); padding: 20px; display: grid; gap: 14px; position: relative; }
-.card::before, .card::after, .hud::before, .hud::after { content: ""; position: absolute; width: 12px; height: 12px; border: 1.5px solid var(--cyan); pointer-events: none; }
-.card::before, .hud::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
-.card::after, .hud::after { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
-.card .card::before, .card .card::after { display: none; }
-.narrow { max-width: 440px; margin: 8vh auto 0; }
-.narrow h1 { font-size: 1.5rem; }
-label.f { display: grid; gap: 6px; font-size: .72rem; color: var(--muted); letter-spacing: .18em; text-transform: uppercase; }
-input[type=email], input[type=password], input[type=search], select, textarea {
-  font: 14px var(--mono); color: var(--cyan); background: rgba(4,8,12,.8); border: 1px solid var(--line-hi); border-radius: 0; padding: 9px 10px; min-width: 0; width: 100%; caret-color: var(--amber); }
-input::placeholder, textarea::placeholder { color: #3c6370; }
-select option { background: var(--panel); color: var(--fg); }
-button { font: inherit; cursor: pointer; }
-.btn { border: 1px solid var(--cyan); background: rgba(63,227,246,.12); color: var(--cyan); font: .8rem var(--mono); letter-spacing: .18em; text-transform: uppercase;
-  padding: 9px 16px; border-radius: 0; transition: background .15s, box-shadow .15s; }
-.btn:hover:not(:disabled) { background: rgba(63,227,246,.25); box-shadow: 0 0 14px var(--cyan-glow); }
-.btn.ghost { border-color: var(--line-hi); background: transparent; color: var(--fg); }
-.btn.ghost:hover { border-color: var(--cyan); color: var(--cyan); }
-.btn:disabled { opacity: .45; cursor: default; }
-.link { background: none; border: 0; color: var(--cyan); padding: 0; font-size: .78rem; letter-spacing: .08em; text-decoration: underline; text-underline-offset: 3px; }
-button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, label.drop:focus-within { outline: 1px solid var(--amber); outline-offset: 2px; box-shadow: 0 0 10px var(--amber-soft); }
-.msg { font-size: .82rem; padding: 9px 12px; border-left: 3px solid var(--cyan); background: var(--ok-soft); color: var(--fg); letter-spacing: .03em; }
-.msg.err { border-color: var(--red); background: var(--red-soft); color: var(--red); }
-.msg.ok { border-color: var(--cyan); color: var(--cyan); }
-.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
-.tabs button { background: transparent; border: 1px solid var(--line); color: var(--muted); padding: 7px 18px; font-size: .75rem; letter-spacing: .2em; text-transform: uppercase; border-radius: 0; }
-.tabs button:hover { color: var(--fg); border-color: var(--line-hi); }
-.tabs button[aria-selected="true"] { color: var(--bg); background: var(--amber); border-color: var(--amber); box-shadow: 0 0 12px rgba(243,180,49,.35); }
-.badge { background: var(--red); color: var(--bg); padding: 0 6px; font-size: .7rem; margin-left: 6px; }
-.summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(0, 1.25fr); gap: 10px; }
-.stat { background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); padding: 14px 16px; display: grid; gap: 6px; align-content: start; position: relative; }
-.stat .k { font-size: .66rem; text-transform: uppercase; letter-spacing: .22em; color: var(--muted); }
-.stat .k::before { content: "// "; color: var(--cyan-dim); }
-.stat .v { font-family: var(--display); font-size: 2.4rem; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--cyan); text-shadow: 0 0 14px var(--cyan-glow); }
-.stat .v small { font-family: var(--mono); font-size: .8rem; color: var(--muted); font-weight: 400; text-shadow: none; }
-.stat.warn .v { color: var(--amber); text-shadow: 0 0 14px rgba(243,180,49,.35); }
-.stat .seg-bar { display: flex; gap: 2px; height: 6px; margin-top: 4px; }
-.stat .seg-bar i { flex: 1; background: var(--line); }
-.stat .seg-bar i.on { background: var(--cyan); box-shadow: 0 0 6px var(--cyan-glow); }
-.gauge { display: flex; align-items: center; gap: 14px; }
-.gauge svg { width: 92px; height: 92px; flex: none; }
-.gauge .ring-bg { stroke: var(--line); }
-.gauge .ring { stroke: var(--cyan); filter: drop-shadow(0 0 4px var(--cyan)); }
-.gauge .ticks { stroke: var(--cyan-dim); }
-.gauge .inner { stroke: var(--amber); opacity: .7; }
-.gauge text { fill: var(--cyan); font: 600 15px var(--display); }
-.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-.controls #q { flex: 1 1 240px; width: auto; }
-.controls select { width: auto; }
-.controls label { display: flex; align-items: center; gap: 6px; }
-.controls input[type=checkbox] { accent-color: var(--amber); }
-.seg { display: inline-flex; border: 1px solid var(--line-hi); }
-.seg button { border: 0; background: transparent; color: var(--muted); padding: 8px 12px; border-right: 1px solid var(--line); font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; }
-.seg button:last-child { border-right: 0; }
-.seg button[aria-pressed="true"] { background: rgba(63,227,246,.14); color: var(--cyan); text-shadow: 0 0 8px var(--cyan-glow); }
-.tablebox { overflow-x: auto; overflow-y: hidden; background: rgba(8,18,26,.85); border: 1px solid var(--line); }
-.tablewrap { position: relative; min-width: 0; }
-table { border-collapse: collapse; width: 100%; min-width: 880px; }
-th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid rgba(18,53,67,.7); vertical-align: middle; }
-th { background: var(--panel-2); font-size: .66rem; text-transform: uppercase; letter-spacing: .2em; color: var(--amber); font-weight: 400; border-bottom: 1px solid var(--line-hi); }
-tbody tr:hover td { background: rgba(63,227,246,.05); }
-tr:last-child td { border-bottom: 0; }
-td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-td.num { color: var(--cyan); }
-td.code { font-size: .82rem; white-space: nowrap; color: var(--amber); letter-spacing: .05em; }
-td.desc { max-width: 380px; font-family: var(--display); font-size: 1rem; font-weight: 500; letter-spacing: .02em; }
-.pack { color: var(--muted); font: .74rem var(--mono); }
-td.supp { font-family: var(--display); font-size: .95rem; color: var(--amber); min-width: 120px; }
-td.supp .pack { display: block; }
-td.supp .code { font-family: var(--mono); font-size: .82rem; }
-.neg { color: var(--red) !important; text-shadow: 0 0 8px var(--red-soft); }
-.pill { display: inline-flex; align-items: center; gap: 7px; padding: 2px 9px; font-size: .68rem; letter-spacing: .16em; text-transform: uppercase; white-space: nowrap; border: 1px solid currentColor; }
-.pill::before { content: ""; width: 6px; height: 6px; background: currentColor; box-shadow: 0 0 6px currentColor; }
-.pill.ok { color: var(--cyan); background: var(--ok-soft); }
-.pill.warn { color: var(--amber); background: var(--amber-soft); }
-.pill.none { color: var(--muted); border-style: dashed; }
-.pill.none::before { box-shadow: none; }
-.when { color: var(--muted); font-size: .7rem; display: block; margin-top: 3px; white-space: nowrap; letter-spacing: .05em; }
-.act { font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; border: 1px solid var(--line-hi); background: transparent; color: var(--fg); padding: 5px 10px; border-radius: 0; white-space: nowrap; }
-.act.primary { border-color: var(--cyan); color: var(--cyan); }
-.act:hover:not(:disabled) { background: rgba(63,227,246,.15); box-shadow: 0 0 10px var(--cyan-glow); }
-.act:disabled { opacity: .45; cursor: default; }
-.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
-.drop { border: 1px dashed var(--line-hi); padding: 18px; display: grid; gap: 6px; place-content: center; text-align: center; color: var(--muted); cursor: pointer; min-height: 120px; font-size: .8rem;
-  background: repeating-linear-gradient(45deg, transparent 0 10px, rgba(29,108,128,.06) 10px 11px); }
-.drop.over, .drop:hover { border-color: var(--cyan); color: var(--cyan); box-shadow: inset 0 0 20px var(--ok-soft); }
-.drop strong { color: var(--cyan); font-weight: 400; letter-spacing: .14em; text-transform: uppercase; }
-textarea { font-size: .85rem; min-height: 120px; resize: vertical; }
-.preview { display: grid; gap: 6px; font-size: .85rem; }
-.preview strong { color: var(--cyan); font-weight: 400; }
-.missing { font-size: .8rem; color: var(--red); word-break: break-word; }
-.foot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; color: var(--muted); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; }
-.ro { font-size: .68rem; color: var(--amber); border: 1px solid var(--amber); padding: 3px 10px; letter-spacing: .2em; text-transform: uppercase; }
-@media (max-width: 860px) { .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } .summary .stat:last-child { grid-column: span 2; } }
-@media (max-width: 720px) { .two { grid-template-columns: 1fr; } h1 { font-size: 1.4rem; letter-spacing: .08em; } .stat .v { font-size: 1.9rem; } .gauge svg { width: 72px; height: 72px; } }
+button { font: inherit; cursor: pointer; color: inherit; }
+input, select, textarea { font: inherit; color: var(--fg); }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.logo { background: url("data:image/png;base64,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") center / contain no-repeat; aspect-ratio: 328 / 140; }
 
-/* ===== Motion layer ===== */
-#fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; opacity: .75; }
-.wrap { position: relative; z-index: 1; }
-body::before { content: ""; position: fixed; left: 0; right: 0; top: 0; height: 320px; z-index: 40; pointer-events: none;
-  background: linear-gradient(180deg, transparent 0%, rgba(63,227,246,.02) 40%, rgba(63,227,246,.055) 75%, rgba(63,227,246,.08) 88%, rgba(63,227,246,.03) 96%, transparent 100%);
-  animation: sweep 11s cubic-bezier(.45,.05,.55,.95) infinite; }
-@keyframes sweep { from { transform: translateY(-340px); } to { transform: translateY(110vh); } }
-/* boot-up: everything slides in once, resting state is fully visible */
-#vApp.booting > *, .narrow { animation: bootIn .6s cubic-bezier(.2,.8,.2,1) both; }
-#vApp.booting > *:nth-child(2) { animation-delay: .08s; } #vApp.booting > *:nth-child(3) { animation-delay: .14s; }
-#vApp.booting > *:nth-child(4) { animation-delay: .2s; } #vApp.booting > *:nth-child(5) { animation-delay: .26s; }
-@keyframes bootIn { from { opacity: 0; transform: translateY(10px); filter: blur(3px); } to { opacity: 1; transform: none; filter: none; } }
-.summary .stat { animation: edgeGlow 3.2s ease-in-out infinite alternate; }
-.summary .stat:nth-child(2) { animation-delay: .8s; } .summary .stat:nth-child(3) { animation-delay: 1.6s; } .summary .stat:nth-child(4) { animation-delay: 2.4s; }
-@keyframes edgeGlow { from { border-color: var(--line); box-shadow: none; } to { border-color: var(--line-hi); box-shadow: 0 0 18px rgba(63,227,246,.08), inset 0 0 22px rgba(63,227,246,.05); } }
-.stat > .shine { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
-.stat > .shine::before { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%;
-  background: linear-gradient(100deg, transparent, rgba(63,227,246,.09), transparent); animation: shine 5.5s ease-in-out infinite; }
-.summary .stat:nth-child(2) .shine::before { animation-delay: 1.3s; } .summary .stat:nth-child(3) .shine::before { animation-delay: 2.6s; } .summary .stat:nth-child(4) .shine::before { animation-delay: 3.9s; }
-@keyframes shine { 0%, 60% { left: -60%; } 100% { left: 130%; } }
-.card::before, .card::after, .hud::before, .hud::after { animation: corner 2.4s ease-in-out infinite alternate; }
-@keyframes corner { from { width: 10px; height: 10px; opacity: .6; } to { width: 22px; height: 22px; opacity: 1; filter: drop-shadow(0 0 4px var(--cyan)); } }
-/* gauge rings spin */
-.gauge .ticks { transform-origin: 50px 50px; animation: spin 18s linear infinite; }
-.gauge .inner { transform-origin: 50px 50px; animation: spin 9s linear infinite reverse; }
-.gauge .orbit { transform-origin: 50px 50px; animation: spin 3.6s linear infinite; }
-.gauge .orbit circle { fill: var(--amber); filter: drop-shadow(0 0 3px var(--amber)); }
+/* ---------- waves (shared) ---------- */
+.waves { position: absolute; left: 0; right: 0; height: 90px; overflow: hidden; pointer-events: none; }
+.waves svg { position: absolute; bottom: 0; left: 0; width: 200%; height: 100%; }
+.waves .w1 { animation: drift 22s linear infinite; opacity: .35; }
+.waves .w2 { animation: drift 15s linear infinite reverse; opacity: .55; }
+.waves .w3 { animation: drift 30s linear infinite; }
+@keyframes drift { to { transform: translateX(-50%); } }
+
+/* ---------- auth shell ---------- */
+#authShell { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+.brand { position: relative; overflow: hidden; color: #fff; padding: 48px; display: flex; flex-direction: column; justify-content: center; gap: 22px;
+  background: radial-gradient(120% 90% at 10% 0%, #3b82cf 0%, var(--blue) 35%, var(--blue-800) 100%); }
+.brand::before { content: ""; position: absolute; top: -8%; left: -10%; width: 130%; height: 22%; background: var(--red); border-radius: 0 0 50% 40% / 0 0 100% 70%;
+  transform: rotate(-4deg); box-shadow: 0 14px 0 #fff; animation: ribbon 9s ease-in-out infinite alternate; }
+@keyframes ribbon { to { transform: rotate(-2deg) translateY(6px); } }
+.brand .badge { position: relative; width: min(340px, 80%); background: #fff; border-radius: 24px; padding: 18px 22px; box-shadow: 0 20px 50px rgba(0,0,0,.25); animation: float 6s ease-in-out infinite; }
+.brand .badge .logo { width: 100%; }
+@keyframes float { 50% { transform: translateY(-8px); } }
+.brand h1 { position: relative; font: 800 clamp(2rem, 4vw, 3rem)/1.05 var(--display); margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+.brand p { position: relative; margin: 0; max-width: 36ch; font-size: 1.05rem; color: rgba(255,255,255,.82); }
+.brand .waves { bottom: 0; height: 120px; }
+.auth-side { display: grid; place-items: center; padding: 40px 24px; }
+.auth-card { width: min(420px, 100%); display: grid; gap: 18px; animation: rise .6s cubic-bezier(.2,.8,.2,1) both; }
+.auth-card h2 { font: 700 1.6rem/1.2 var(--display); margin: 0; letter-spacing: -.01em; }
+.auth-card .sub { color: var(--muted); margin: 6px 0 0; }
+.field { display: grid; gap: 6px; font-weight: 600; font-size: .9rem; }
+.field input { border: 1.5px solid var(--line-2); background: var(--surface); border-radius: 12px; padding: 12px 14px; transition: border-color .15s, box-shadow .15s; }
+.field input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px rgba(44,108,180,.15); }
+.links { display: flex; gap: 18px; flex-wrap: wrap; font-size: .9rem; }
+.link { background: none; border: 0; padding: 0; color: var(--blue); font-weight: 600; }
+@media (prefers-color-scheme: dark) { .link { color: #7fb0ea; } }
+.link:hover { text-decoration: underline; }
+@media (max-width: 860px) {
+  #authShell { grid-template-columns: 1fr; }
+  .brand { padding: 36px 20px 110px; min-height: 0; }
+  .brand::before { height: 22%; }
+}
+
+/* ---------- buttons, messages ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: 0; border-radius: 12px; padding: 11px 18px; font-weight: 700;
+  background: var(--blue); color: #fff; box-shadow: 0 6px 16px rgba(44,108,180,.28); transition: transform .15s, box-shadow .15s, background .15s; }
+.btn:hover:not(:disabled) { transform: translateY(-1px); background: var(--blue-600); box-shadow: 0 10px 22px rgba(44,108,180,.34); }
+.btn:active:not(:disabled) { transform: translateY(0); }
+.btn:disabled { opacity: .55; cursor: default; }
+.btn.ghost { background: var(--surface); color: var(--fg); border: 1.5px solid var(--line-2); box-shadow: none; font-weight: 600; }
+.btn.ghost:hover:not(:disabled) { background: var(--surface-2); border-color: var(--blue); }
+.btn.sm { padding: 7px 12px; border-radius: 10px; font-size: .88rem; }
+.msg { font-size: .9rem; padding: 10px 14px; border-radius: 12px; background: var(--blue-50); }
+.msg.err { background: var(--red-50); color: var(--red); }
+.msg.ok { background: var(--ok-50); color: var(--ok); }
+
+/* ---------- app bar ---------- */
+.appbar { position: sticky; top: 0; z-index: 30; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: saturate(1.4) blur(12px);
+  border-bottom: 1px solid var(--line); }
+.appbar .in { max-width: 1320px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.appbar .logo { width: 104px; flex: none; }
+.appbar .ttl { font: 700 1rem var(--display); letter-spacing: -.01em; white-space: nowrap; }
+.appbar .ttl small { display: block; font: 500 .75rem var(--body); color: var(--muted); }
+.nav { display: flex; gap: 4px; background: var(--surface-2); border: 1px solid var(--line); padding: 4px; border-radius: 12px; }
+.nav button { border: 0; background: none; padding: 7px 14px; border-radius: 9px; font-weight: 600; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; transition: background .2s, color .2s; }
+.nav button:hover { color: var(--fg); }
+.nav button[aria-selected="true"] { background: var(--surface); color: var(--blue); box-shadow: var(--shadow); }
+@media (prefers-color-scheme: dark) { .nav button[aria-selected="true"] { color: #8fbaf0; } }
+.count-badge { background: var(--red); color: #fff; border-radius: 99px; font-size: .72rem; padding: 0 7px; line-height: 18px; }
+.spacer { flex: 1; }
+.user { display: flex; align-items: center; gap: 10px; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; font: 700 .9rem var(--display);
+  background: linear-gradient(135deg, var(--blue), var(--blue-800)); box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--red); }
+.user .em { font-size: .85rem; color: var(--muted); max-width: 22ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ro { font-size: .75rem; font-weight: 700; color: var(--blue); background: var(--blue-50); border-radius: 99px; padding: 3px 10px; }
+.iconbtn { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; color: var(--muted); transition: color .15s, border-color .15s, transform .3s; }
+.iconbtn:hover { color: var(--blue); border-color: var(--blue); }
+.iconbtn.spin svg { animation: spin .8s linear; }
 @keyframes spin { to { transform: rotate(360deg); } }
-/* header widgets */
-.title-row { display: flex; align-items: center; gap: 14px; }
-.reticle { width: 42px; height: 42px; flex: none; }
-.reticle .r1 { transform-origin: 21px 21px; animation: spin 6s linear infinite; }
-.reticle .r2 { transform-origin: 21px 21px; animation: spin 4s linear infinite reverse; }
-.reticle .core { animation: blink 1.2s steps(2) infinite; }
-.eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 22px; }
-.eq i { width: 3px; background: var(--cyan); box-shadow: 0 0 6px var(--cyan-glow); animation: eq 1.1s ease-in-out infinite alternate; }
-.eq i:nth-child(odd) { background: var(--amber); box-shadow: 0 0 6px rgba(243,180,49,.4); }
-.eq i:nth-child(1) { animation-delay: -.2s } .eq i:nth-child(2) { animation-delay: -.9s } .eq i:nth-child(3) { animation-delay: -.4s }
-.eq i:nth-child(4) { animation-delay: -.7s } .eq i:nth-child(5) { animation-delay: -.1s } .eq i:nth-child(6) { animation-delay: -.55s }
-.eq i:nth-child(7) { animation-delay: -.3s } .eq i:nth-child(8) { animation-delay: -.8s } .eq i:nth-child(9) { animation-delay: -.45s }
-@keyframes eq { from { height: 3px; } to { height: 22px; } }
-.top::after { animation: ticks 2s linear infinite; }
-@keyframes ticks { to { background-position: 12px 0; } }
-.title-row h1::before { content: none; }
-.hexcode { font-size: .66rem; color: var(--cyan-dim); letter-spacing: .12em; min-width: 23ch; }
-/* table life */
-tbody tr { transition: background .2s; }
-tbody tr:hover td { background: rgba(63,227,246,.07); box-shadow: inset 0 1px 0 rgba(63,227,246,.25), inset 0 -1px 0 rgba(63,227,246,.25); }
-tbody tr.flash td { animation: rowFlash 1.4s ease-out; }
-@keyframes rowFlash { 0% { background: rgba(63,227,246,.45); } 100% { background: transparent; } }
-.pill.ok::before { animation: blink 1.8s steps(2) infinite; }
-.pill.warn { animation: warnPulse 1.2s ease-in-out infinite alternate; }
-@keyframes warnPulse { to { box-shadow: 0 0 12px rgba(243,180,49,.5); } }
-.tabs button[aria-selected="true"] { animation: tabGlow 1.8s ease-in-out infinite alternate; }
-@keyframes tabGlow { from { box-shadow: 0 0 6px rgba(243,180,49,.3); } to { box-shadow: 0 0 18px rgba(243,180,49,.6); } }
-.btn, .act { position: relative; overflow: hidden; }
-.btn::after, .act::after { content: ""; position: absolute; top: 0; bottom: 0; width: 30%; left: -40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,.25), transparent); transition: left .45s; }
-.btn:hover::after, .act:hover::after { left: 120%; }
-.stat .v.tick { animation: numTick .35s ease-out; }
-@keyframes numTick { from { text-shadow: 0 0 28px var(--cyan); } }
-/* ===== Sign-in terminal ===== */
-#vAuth { max-width: 460px; gap: 16px; }
-.auth-top { display: flex; justify-content: space-between; font-size: .64rem; letter-spacing: .22em; color: var(--muted); text-transform: uppercase; border-bottom: 1px dashed var(--line); padding-bottom: 8px; }
-.auth-top b { color: var(--amber); font-weight: 400; }
-.radar { width: 128px; height: 128px; margin: 4px auto 0; border-radius: 50%; position: relative; border: 1px solid var(--line-hi);
-  background: repeating-radial-gradient(circle, transparent 0 15px, rgba(29,108,128,.35) 15px 16px),
-              linear-gradient(90deg, transparent 49.6%, rgba(29,108,128,.4) 49.6% 50.4%, transparent 50.4%),
-              linear-gradient(0deg, transparent 49.6%, rgba(29,108,128,.4) 49.6% 50.4%, transparent 50.4%), rgba(4,8,12,.6);
-  box-shadow: 0 0 30px rgba(63,227,246,.12), inset 0 0 20px rgba(63,227,246,.1); }
-.radar::before { content: ""; position: absolute; inset: 0; border-radius: 50%;
-  background: conic-gradient(from 0deg, rgba(63,227,246,.55), rgba(63,227,246,0) 70deg, transparent 360deg); animation: spin 2.8s linear infinite; }
-.radar::after { content: ""; position: absolute; inset: -9px; border-radius: 50%; border: 1px dashed var(--amber); opacity: .5; animation: spin 14s linear infinite reverse; }
-.radar i { position: absolute; width: 5px; height: 5px; background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: blink 1.4s steps(2) infinite; }
-.radar i:nth-child(1) { left: 30%; top: 34%; } .radar i:nth-child(2) { left: 68%; top: 60%; animation-delay: .5s; background: var(--cyan); box-shadow: 0 0 8px var(--cyan); } .radar i:nth-child(3) { left: 44%; top: 74%; animation-delay: .9s; }
-#vAuth h1 { text-align: center; font-size: 1.45rem; }
-#vAuth h1::before { content: none; }
-#authIntro { text-align: center; }
-#vAuth label.f::before { content: none; }
-#vAuth label.f > span::before { content: "> "; color: var(--amber); }
-.auth-foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font-size: .62rem; letter-spacing: .2em; color: var(--muted); text-transform: uppercase; border-top: 1px dashed var(--line); padding-top: 8px; }
-.auth-foot .live::before { content: ""; display: inline-block; width: 6px; height: 6px; background: var(--cyan); margin-right: 6px; box-shadow: 0 0 8px var(--cyan); animation: blink 1.6s steps(2) infinite; }
-/* ===== Decode overlay (sign in / sign out) ===== */
-#decode { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: rgba(2,5,8,.94); opacity: 0; transition: opacity .35s; }
-#decode.on { opacity: 1; }
-#rain { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .55; }
-.dc-panel { position: relative; width: min(520px, calc(100% - 32px)); padding: 28px 24px; display: grid; gap: 14px; justify-items: center; text-align: center;
-  background: rgba(8,18,26,.88); border: 1px solid var(--line-hi); box-shadow: 0 0 40px rgba(63,227,246,.15); }
-.dc-panel::before, .dc-panel::after { content: ""; position: absolute; width: 22px; height: 22px; border: 2px solid var(--cyan); }
-.dc-panel::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; } .dc-panel::after { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
-.dc-rings { width: 96px; height: 96px; }
-.dc-rings .a { transform-origin: 48px 48px; animation: spin 1.6s linear infinite; }
-.dc-rings .b { transform-origin: 48px 48px; animation: spin 2.4s linear infinite reverse; }
-.dc-rings .c { transform-origin: 48px 48px; animation: spin 5s linear infinite; }
-.dc-title { font: 700 1.7rem var(--display); letter-spacing: .22em; color: var(--cyan); text-shadow: 0 0 16px var(--cyan-glow); min-height: 1.3em; word-break: break-all; }
-.dc-sub { font-size: .72rem; letter-spacing: .25em; color: var(--amber); min-height: 1.2em; }
-.dc-bar { width: 100%; height: 6px; background: var(--line); position: relative; overflow: hidden; }
-.dc-bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: linear-gradient(90deg, var(--cyan-dim), var(--cyan)); box-shadow: 0 0 10px var(--cyan); transition: width .2s; }
-.dc-log { margin: 0; width: 100%; height: 6.4em; overflow: hidden; text-align: left; font: .7rem/1.6 var(--mono); color: var(--cyan-dim); white-space: pre; }
-#decode.granted .dc-title { color: var(--cyan); text-shadow: 0 0 26px var(--cyan); }
-#decode.denied .dc-title { color: var(--red); text-shadow: 0 0 20px var(--red); }
-#decode.denied .dc-bar i { background: var(--red); box-shadow: 0 0 10px var(--red); }
+@media (max-width: 720px) { .user .em { display: none; } .appbar .ttl { display: none; } }
+
+/* ---------- hero ---------- */
+.hero { position: relative; overflow: hidden; color: #fff; background: radial-gradient(90% 140% at 85% 0%, #3d86d4 0%, var(--blue) 40%, var(--blue-800) 100%); }
+.hero::before { content: ""; position: absolute; right: -8%; top: -60px; width: 46%; height: 120px; background: var(--red); border-radius: 0 0 0 100% / 0 0 0 100%; box-shadow: -10px 10px 0 rgba(255,255,255,.9); opacity: .95; }
+.hero .in { position: relative; max-width: 1320px; margin: 0 auto; padding: 34px 20px 92px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: center; }
+.hero .waves { bottom: -1px; }
+.ring { position: relative; width: 168px; height: 168px; }
+.ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .bgc { stroke: rgba(255,255,255,.18); }
+.ring .fg { stroke: #fff; stroke-linecap: round; filter: drop-shadow(0 0 8px rgba(255,255,255,.5)); }
+.ring .rd { stroke: var(--red); stroke-linecap: round; }
+.ring .lbl { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+.ring .pct { font: 800 2rem/1 var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.ring .cap { font-size: .78rem; opacity: .8; margin-top: 4px; }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.kpi { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); border-radius: var(--r); padding: 16px 18px; backdrop-filter: blur(6px); display: grid; gap: 4px; min-width: 0; }
+.kpi .k { font-size: .78rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; opacity: .8; }
+.kpi .v { font: 800 2.1rem/1.1 var(--display); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.kpi .v small { font: 500 .9rem var(--body); opacity: .75; letter-spacing: 0; }
+.kpi .s { font-size: .82rem; opacity: .8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kpi .v.date { font-size: 1.25rem; padding-top: 8px; }
+.bar { height: 6px; background: rgba(255,255,255,.2); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+.bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #fff, #cfe3fa); border-radius: inherit; }
+@media (max-width: 900px) { .hero .in { grid-template-columns: 1fr; justify-items: center; } .kpis { width: 100%; } }
+@media (max-width: 620px) { .kpis { grid-template-columns: 1fr 1fr; } .kpis .kpi:last-child { grid-column: span 2; } .kpi .v { font-size: 1.7rem; } }
+
+/* ---------- main ---------- */
+.main { max-width: 1320px; margin: -56px auto 0; padding: 0 20px 48px; position: relative; display: grid; gap: 18px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.card h3 { font: 700 1.1rem var(--display); margin: 0; letter-spacing: -.01em; }
+.card .hint { color: var(--muted); margin: -6px 0 0; font-size: .92rem; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.seg { display: inline-flex; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 4px; }
+.seg button { border: 0; background: none; padding: 7px 14px; border-radius: 9px; font-weight: 600; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: var(--shadow); }
+.search { flex: 1 1 260px; position: relative; min-width: 0; }
+.search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+.search input { width: 100%; border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 10px 12px 10px 38px; transition: border-color .15s, box-shadow .15s, background .15s; }
+.search input:focus { outline: none; border-color: var(--blue); background: var(--surface); box-shadow: 0 0 0 4px rgba(44,108,180,.12); }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); cursor: pointer; user-select: none; }
+.toggle input { appearance: none; width: 36px; height: 20px; border-radius: 99px; background: var(--line-2); position: relative; transition: background .2s; cursor: pointer; margin: 0; }
+.toggle input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+.toggle input:checked { background: var(--blue); }
+.toggle input:checked::after { transform: translateX(16px); }
+.menu { position: relative; }
+.menu-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-lg); padding: 6px; min-width: 240px; display: grid; animation: pop .16s ease-out; }
+.menu-list button { border: 0; background: none; text-align: left; padding: 10px 12px; border-radius: 10px; display: grid; }
+.menu-list button:hover { background: var(--blue-50); }
+.menu-list button small { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--blue-50); color: var(--blue-800); border-radius: 99px; padding: 4px 6px 4px 12px; font-size: .84rem; font-weight: 600; animation: pop .2s ease-out; }
+@media (prefers-color-scheme: dark) { .chip { color: #bcd6f6; } }
+.chip button { border: 0; background: rgba(44,108,180,.15); width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; padding: 0; }
+.chip button:hover { background: var(--red); color: #fff; }
+
+/* ---------- table ---------- */
+.tablebox { overflow: auto; max-height: min(72vh, 900px); border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 960px; }
+thead th { position: sticky; top: 0; z-index: 2; background: var(--surface-2); text-align: left; font-size: .72rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted);
+  border-bottom: 1px solid var(--line); padding: 0; white-space: nowrap; }
+.th { display: flex; align-items: center; gap: 0; padding: 8px 4px 8px 10px; }
+th.num .th { justify-content: flex-end; }
+.sortlbl { border: 0; background: none; padding: 4px 2px; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; display: inline-flex; align-items: center; gap: 4px; }
+.sortlbl:hover { color: var(--fg); }
+.sortlbl .arr { width: 10px; opacity: 0; transition: opacity .15s, transform .2s; }
+th.sorted .sortlbl { color: var(--blue); } th.sorted .arr { opacity: 1; }
+th.sorted.desc .arr { transform: rotate(180deg); }
+.fbtn { border: 0; background: none; width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; color: var(--muted); position: relative; flex: none; }
+.fbtn:hover { background: var(--blue-50); color: var(--blue); }
+th.filtered .fbtn { background: var(--blue); color: #fff; }
+td { padding: 10px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+tbody tr { transition: background .15s; }
+tbody tr:hover { background: var(--surface-2); }
+tbody tr:last-child td { border-bottom: 0; }
+td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: .88rem; }
+td.code { font-family: var(--mono); font-size: .84rem; color: var(--blue); font-weight: 500; white-space: nowrap; }
+@media (prefers-color-scheme: dark) { td.code { color: #8fbaf0; } }
+td.prod { font-weight: 600; min-width: 220px; }
+.sm-muted { display: block; color: var(--muted); font-size: .8rem; font-weight: 400; }
+td.sup { min-width: 120px; }
+.neg { color: var(--red); font-weight: 600; }
+.zero { color: var(--muted); }
+.pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 99px; padding: 3px 10px 3px 8px; font-size: .8rem; font-weight: 700; white-space: nowrap; }
+.pill.ok { background: var(--ok-50); color: var(--ok); }
+.pill.no { background: var(--surface-2); color: var(--muted); border: 1px dashed var(--line-2); }
+.pill svg { flex: none; }
+td.date { white-space: nowrap; color: var(--muted); font-size: .88rem; }
+.stcell { display: flex; align-items: center; gap: 8px; justify-content: space-between; min-width: 178px; }
+.act { border: 1.5px solid var(--blue); background: var(--surface); color: var(--blue); border-radius: 10px; padding: 6px 12px; font-weight: 700; font-size: .84rem; white-space: nowrap; transition: background .15s, color .15s, transform .15s; }
+.act:hover:not(:disabled) { background: var(--blue); color: #fff; transform: translateY(-1px); }
+.act.undo { border-color: transparent; color: var(--muted); font-weight: 600; }
+.act.undo:hover:not(:disabled) { background: var(--red-50); color: var(--red); }
+.act:disabled { opacity: .5; cursor: default; }
+tr.just td { animation: justDone 1.6s ease-out; }
+@keyframes justDone { 0% { background: rgba(19,138,85,.22); } 100% { background: transparent; } }
+tr.just .pill.ok svg path { stroke-dasharray: 20; animation: draw .5s .1s ease-out both; }
+@keyframes draw { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
+.empty { text-align: center; padding: 48px 16px !important; color: var(--muted); }
+.foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: .85rem; color: var(--muted); }
+.skel td { padding: 14px; }
+.skel span { display: block; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--line) 0%, var(--surface-2) 50%, var(--line) 100%); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+/* ---------- filter popover ---------- */
+#fpop { position: fixed; z-index: 60; width: 300px; max-height: min(520px, calc(100vh - 24px)); background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column; overflow: hidden; animation: pop .16s ease-out; transform-origin: top left; }
+@keyframes pop { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+.fp-h { padding: 12px 14px 6px; font: 700 .95rem var(--display); display: flex; justify-content: space-between; align-items: center; }
+.fp-sec { padding: 6px 14px; display: grid; gap: 6px; }
+.fp-sort { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.fp-sort button { border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 7px 8px; font-size: .84rem; font-weight: 600; }
+.fp-sort button:hover, .fp-sort button.on { border-color: var(--blue); color: var(--blue); background: var(--blue-50); }
+.fp-lbl { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+.fp-row { display: flex; gap: 6px; }
+.fp-row > * { min-width: 0; flex: 1; }
+#fpop input[type=text], #fpop input[type=number], #fpop input[type=date], #fpop select { width: 100%; border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 9px; padding: 7px 9px; font-size: .88rem; }
+#fpop input:focus, #fpop select:focus { outline: none; border-color: var(--blue); }
+.fp-quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.fp-quick button { border: 1px solid var(--line); background: none; border-radius: 99px; padding: 3px 10px; font-size: .8rem; }
+.fp-quick button:hover { border-color: var(--blue); color: var(--blue); }
+.fp-list { overflow: auto; flex: 1; min-height: 80px; max-height: 240px; margin: 0 14px; border: 1px solid var(--line); border-radius: 10px; padding: 4px; }
+.fp-list label { display: flex; gap: 8px; align-items: center; padding: 5px 8px; border-radius: 7px; font-size: .88rem; cursor: pointer; }
+.fp-list label:hover { background: var(--surface-2); }
+.fp-list label span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fp-list label em { font-style: normal; color: var(--muted); font-size: .78rem; }
+.fp-list input { accent-color: var(--blue); }
+.fp-list .all { border-bottom: 1px solid var(--line); border-radius: 7px 7px 0 0; font-weight: 700; }
+.fp-more { font-size: .78rem; color: var(--muted); padding: 6px 8px; }
+.fp-f { display: flex; justify-content: space-between; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); background: var(--surface-2); }
+@media (max-width: 600px) {
+  #fpop { left: 0 !important; right: 0; top: auto !important; bottom: 0; width: 100%; border-radius: 18px 18px 0 0; max-height: 82vh; animation: sheet .22s ease-out; }
+  @keyframes sheet { from { transform: translateY(100%); } }
+}
+
+/* ---------- upload + people ---------- */
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+@media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+.drop { border: 2px dashed var(--line-2); border-radius: 14px; padding: 22px; display: grid; gap: 6px; place-content: center; text-align: center; color: var(--muted); cursor: pointer; min-height: 130px; transition: border-color .15s, background .15s; }
+.drop:hover, .drop.over { border-color: var(--blue); background: var(--blue-50); color: var(--blue-800); }
+@media (prefers-color-scheme: dark) { .drop:hover, .drop.over { color: #bcd6f6; } }
+.drop strong { color: var(--fg); }
+.drop svg { margin: 0 auto 4px; color: var(--blue); }
+textarea { border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 14px; padding: 12px; min-height: 130px; resize: vertical; width: 100%; font: .9rem var(--mono); }
+textarea:focus { outline: none; border-color: var(--blue); }
+.preview { display: grid; gap: 6px; font-size: .92rem; }
+.missing { color: var(--red); font-family: var(--mono); font-size: .82rem; word-break: break-word; }
+.people select { border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 9px; padding: 6px 8px; }
+.people table { min-width: 520px; }
+
+/* ---------- toasts ---------- */
+#toasts { position: fixed; right: 20px; bottom: 20px; z-index: 80; display: grid; gap: 8px; }
+.toast { background: var(--blue-900); color: #fff; border-radius: 12px; padding: 12px 16px; box-shadow: var(--shadow-lg); font-weight: 600; font-size: .92rem; display: flex; gap: 10px; align-items: center;
+  animation: toastIn .3s cubic-bezier(.2,.8,.2,1); border-left: 4px solid var(--ok); max-width: 360px; }
+.toast.err { border-left-color: var(--red); }
+.toast.out { animation: toastOut .3s ease-in forwards; }
+@keyframes toastIn { from { opacity: 0; transform: translateY(12px) scale(.96); } }
+@keyframes toastOut { to { opacity: 0; transform: translateY(8px); } }
+
+/* ---------- sign-in / sign-out transition ---------- */
+#trans { position: fixed; inset: 0; z-index: 100; pointer-events: all; overflow: hidden; }
+.t-fill { position: absolute; inset: 0; background: var(--blue); transform: translateY(calc(100% + 130px)); transition: transform .75s cubic-bezier(.7,0,.2,1); }
+.t-fill::after { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 55% at 50% 45%, rgba(255,255,255,.18), transparent 70%), linear-gradient(180deg, transparent 50%, rgba(14,42,79,.45)); }
+.t-fill .waves { height: 120px; }
+.t-fill .waves.top { top: -119px; }
+.t-fill .waves.bot { bottom: -119px; transform: scaleY(-1); }
+#trans.on .t-fill { transform: translateY(0); }
+#trans.leave .t-fill { transform: translateY(calc(-100% - 130px)); }
+.t-center { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 18px; color: #fff; text-align: center; opacity: 0; transition: opacity .3s; }
+#trans.on .t-center { opacity: 1; transition-delay: .35s; }
+#trans.leave .t-center { opacity: 0; transition-delay: 0s; }
+.t-badge { background: #fff; border-radius: 22px; padding: 14px 20px; box-shadow: 0 20px 50px rgba(0,0,0,.3); animation: float 3s ease-in-out infinite; }
+.t-badge .logo { width: 220px; }
+.t-text { font: 700 1.5rem var(--display); letter-spacing: .01em; min-height: 1.4em; font-variant-numeric: tabular-nums; }
+.t-bar { width: 240px; height: 5px; border-radius: 99px; background: rgba(255,255,255,.25); overflow: hidden; }
+.t-bar i { display: block; height: 100%; width: 0; background: #fff; border-radius: inherit; transition: width .25s; }
+#trans.denied .t-bar i { background: #ffb3b8; }
+
+/* ---------- entrance (only once per sign-in) ---------- */
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } }
+#vApp.booting .hero .in > *, #vApp.booting .main > * { animation: rise .7s cubic-bezier(.2,.8,.2,1) both; }
+#vApp.booting .kpi:nth-child(2) { animation: rise .7s .08s both; } #vApp.booting .kpi:nth-child(3) { animation: rise .7s .16s both; }
+#vApp.booting .main > *:nth-child(2) { animation-delay: .1s; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
-  #fx { display: none; }
 }
 </style>
 </head>
 <body>
-<canvas id="fx" aria-hidden="true"></canvas>
-<div id="decode" hidden role="status" aria-live="polite">
-  <canvas id="rain" aria-hidden="true"></canvas>
-  <div class="dc-panel">
-    <svg class="dc-rings" viewBox="0 0 96 96" aria-hidden="true">
-      <circle class="c" cx="48" cy="48" r="45" fill="none" stroke="#1b8fa3" stroke-width="2" stroke-dasharray="2 5"/>
-      <circle class="a" cx="48" cy="48" r="36" fill="none" stroke="#3fe3f6" stroke-width="3" stroke-dasharray="60 166"/>
-      <circle class="b" cx="48" cy="48" r="26" fill="none" stroke="#f3b431" stroke-width="2" stroke-dasharray="30 20"/>
-      <rect x="44" y="44" width="8" height="8" fill="#3fe3f6"/>
-    </svg>
-    <div class="dc-title" id="dcTitle"></div>
-    <div class="dc-sub" id="dcSub"></div>
-    <div class="dc-bar"><i id="dcBar"></i></div>
-    <pre class="dc-log" id="dcLog"></pre>
+
+<!-- Sign-in / sign-out transition -->
+<div id="trans" hidden aria-live="polite">
+  <div class="t-fill">
+    <div class="waves top" aria-hidden="true"><svg viewBox="0 0 2880 120" preserveAspectRatio="none"><path class="w1" style="fill:var(--blue)" d="M0 52 Q 360 12 720 52 T 1440 52 T 2160 52 T 2880 52 V120 H0 Z"/><path class="w2" style="fill:var(--blue)" d="M0 64 Q 360 98 720 64 T 1440 64 T 2160 64 T 2880 64 V120 H0 Z"/><path class="w3" style="fill:var(--blue)" d="M0 80 Q 360 54 720 80 T 1440 80 T 2160 80 T 2880 80 V120 H0 Z"/></svg></div>
+    <div class="waves bot" aria-hidden="true"><svg viewBox="0 0 2880 120" preserveAspectRatio="none"><path class="w1" style="fill:var(--blue)" d="M0 52 Q 360 12 720 52 T 1440 52 T 2160 52 T 2880 52 V120 H0 Z"/><path class="w2" style="fill:var(--blue)" d="M0 64 Q 360 98 720 64 T 1440 64 T 2160 64 T 2880 64 V120 H0 Z"/><path class="w3" style="fill:var(--blue)" d="M0 80 Q 360 54 720 80 T 1440 80 T 2160 80 T 2880 80 V120 H0 Z"/></svg></div>
+  </div>
+  <div class="t-center">
+    <div class="t-badge"><div class="logo" role="img" aria-label="Mehadrin"></div></div>
+    <div class="t-text" id="tText"></div>
+    <div class="t-bar"><i id="tBar"></i></div>
   </div>
 </div>
-<div class="wrap">
+<div id="toasts" aria-live="polite"></div>
 
-  <!-- Shown when config.js has not been filled in -->
-  <section class="card narrow" id="vNoConfig" hidden>
+<!-- ============ Auth screens ============ -->
+<div id="authShell" hidden>
+  <aside class="brand">
+    <div class="badge"><div class="logo" role="img" aria-label="Mehadrin"></div></div>
     <h1>Inventory Accuracy</h1>
-    <div class="msg err">This site isn't connected to its database yet. Open <b>config.js</b> on GitHub and paste in your Supabase Project URL and Publishable key.</div>
-  </section>
+    <p>Every product in the warehouse, checked and confirmed. Sign in to see where the count stands today.</p>
+    <div class="waves" aria-hidden="true"><svg viewBox="0 0 2880 120" preserveAspectRatio="none"><path class="w1" style="fill:#ffffff" d="M0 52 Q 360 12 720 52 T 1440 52 T 2160 52 T 2880 52 V120 H0 Z"/><path class="w2" style="fill:#ffffff" d="M0 64 Q 360 98 720 64 T 1440 64 T 2160 64 T 2880 64 V120 H0 Z"/><path class="w3" style="fill:var(--bg)" d="M0 80 Q 360 54 720 80 T 1440 80 T 2160 80 T 2880 80 V120 H0 Z"/></svg></div>
+  </aside>
+  <div class="auth-side">
 
-  <!-- Sign in / create account -->
-  <section class="card narrow" id="vAuth" hidden>
-    <div class="auth-top"><span>&#9671; Secure access terminal</span><span>Node <b id="authNode">07-A</b></span></div>
-    <div class="radar" aria-hidden="true"><i></i><i></i><i></i></div>
-    <h1 id="authTitle">Inventory Accuracy</h1>
-    <p class="meta" id="authIntro" style="margin:0">Sign in to see the inventory tracker.</p>
-    <form id="authForm" class="card" style="padding:0;border:0" novalidate>
-      <label class="f"><span>Email</span><input type="email" id="authEmail" autocomplete="email" required></label>
-      <label class="f" id="pwWrap"><span>Password</span><input type="password" id="authPw" autocomplete="current-password" minlength="8" required></label>
-      <button class="btn" id="authBtn" type="submit">Sign in</button>
-    </form>
-    <div class="msg" id="authMsg" hidden></div>
-    <div class="meta" style="display:flex;gap:16px;flex-wrap:wrap">
-      <button class="link" id="toSignup" type="button">Create an account</button>
-      <button class="link" id="toSignin" type="button" hidden>I already have an account</button>
-      <button class="link" id="toReset" type="button">Forgot password</button>
-    </div>
-    <div class="auth-foot"><span class="live">Channel secure</span><span>TLS &middot; <b id="authHex" style="font-weight:400;color:var(--cyan)">0000</b></span></div>
-  </section>
+    <section class="auth-card" id="vNoConfig" hidden>
+      <h2>Almost there</h2>
+      <div class="msg err">This site isn't connected to its database yet. Open <b>config.js</b> on GitHub and paste in your Supabase Project URL and Publishable key.</div>
+    </section>
 
-  <!-- Set a new password after a reset email -->
-  <section class="card narrow" id="vNewPw" hidden>
-    <h1>Set a new password</h1>
-    <form id="newPwForm" class="card" style="padding:0;border:0">
-      <label class="f">New password (at least 8 characters)<input type="password" id="newPw" autocomplete="new-password" minlength="8" required></label>
-      <button class="btn" type="submit">Save password</button>
-    </form>
-    <div class="msg" id="newPwMsg" hidden></div>
-  </section>
+    <section class="auth-card" id="vAuth" hidden>
+      <div><h2 id="authTitle">Welcome back</h2><p class="sub" id="authIntro">Sign in to see the inventory tracker.</p></div>
+      <form id="authForm" style="display:grid;gap:14px" novalidate>
+        <label class="field">Email<input type="email" id="authEmail" autocomplete="email" required></label>
+        <label class="field" id="pwWrap">Password<input type="password" id="authPw" autocomplete="current-password" minlength="8" required></label>
+        <button class="btn" id="authBtn" type="submit">Sign in</button>
+      </form>
+      <div class="msg" id="authMsg" hidden></div>
+      <div class="links">
+        <button class="link" id="toSignup" type="button">Create an account</button>
+        <button class="link" id="toSignin" type="button" hidden>I already have an account</button>
+        <button class="link" id="toReset" type="button">Forgot password</button>
+      </div>
+    </section>
 
-  <!-- Signed in but not approved -->
-  <section class="card narrow" id="vPending" hidden>
-    <h1>Waiting for approval</h1>
-    <p style="margin:0">You're signed in as <b id="pendEmail"></b>. The owner needs to approve your account before you can see the inventory. Check back later.</p>
-    <button class="btn ghost" id="pendRefresh" type="button">Check again</button>
-    <button class="link" data-signout type="button">Sign out</button>
-  </section>
+    <section class="auth-card" id="vNewPw" hidden>
+      <div><h2>Set a new password</h2><p class="sub">At least 8 characters.</p></div>
+      <form id="newPwForm" style="display:grid;gap:14px">
+        <label class="field">New password<input type="password" id="newPw" autocomplete="new-password" minlength="8" required></label>
+        <button class="btn" type="submit">Save password</button>
+      </form>
+      <div class="msg" id="newPwMsg" hidden></div>
+    </section>
 
-  <!-- The app -->
-  <div id="vApp" hidden style="display:grid;gap:20px">
-    <div class="top">
-      <div><div class="title-row">
-        <svg class="reticle" viewBox="0 0 42 42" aria-hidden="true">
-          <circle class="r1" cx="21" cy="21" r="19" fill="none" stroke="#3fe3f6" stroke-width="1.5" stroke-dasharray="8 4 2 4"/>
-          <circle class="r2" cx="21" cy="21" r="13" fill="none" stroke="#f3b431" stroke-width="1.5" stroke-dasharray="20 62"/>
-          <path d="M21 4v6M21 32v6M4 21h6M32 21h6" stroke="#1b8fa3" stroke-width="1.5"/>
-          <rect class="core" x="18.5" y="18.5" width="5" height="5" fill="#3fe3f6"/>
-        </svg>
-        <h1 style="margin:0">Inventory Accuracy</h1>
-        <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-      </div><div class="ticker"><span class="live">SYSTEM ONLINE</span><span>SRC <b id="meta">LOADING…</b></span><span>LOCAL <b id="clock">--:--:--</b></span><span class="hexcode" id="hexcode" aria-hidden="true">0x0000 0000 0000</span></div></div>
-      <div class="who"><span class="ro" id="roTag" hidden>View only</span><span id="whoEmail"></span><button class="btn ghost" id="refresh" type="button">Refresh</button><button class="btn ghost" data-signout type="button">Sign out</button></div>
-    </div>
+    <section class="auth-card" id="vPending" hidden>
+      <div><h2>Waiting for approval</h2><p class="sub">You're signed in as <b id="pendEmail"></b>. The owner needs to approve your account before you can see the inventory.</p></div>
+      <button class="btn ghost" id="pendRefresh" type="button">Check again</button>
+      <div class="links"><button class="link" data-signout type="button">Sign out</button></div>
+    </section>
+  </div>
+</div>
 
-    <div class="tabs" role="tablist" id="tabs" hidden>
+<!-- ============ App ============ -->
+<div id="vApp" hidden>
+  <header class="appbar"><div class="in">
+    <div class="logo" role="img" aria-label="Mehadrin"></div>
+    <div class="ttl">Inventory Accuracy<small id="meta">Loading…</small></div>
+    <nav class="nav" id="tabs" role="tablist" hidden>
       <button role="tab" data-tab="tTrack" aria-selected="true">Tracker</button>
       <button role="tab" data-tab="tUpload" aria-selected="false">Upload</button>
-      <button role="tab" data-tab="tPeople" aria-selected="false">People<span class="badge" id="pendCount" hidden></span></button>
+      <button role="tab" data-tab="tPeople" aria-selected="false">People <span class="count-badge" id="pendCount" hidden></span></button>
+    </nav>
+    <div class="spacer"></div>
+    <span class="ro" id="roTag" hidden>View only</span>
+    <button class="iconbtn" id="refresh" type="button" aria-label="Refresh" title="Refresh">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+    </button>
+    <div class="user"><div class="avatar" id="avatar">A</div><span class="em" id="whoEmail"></span>
+      <button class="btn ghost sm" data-signout type="button">Sign out</button></div>
+  </div></header>
+
+  <section class="hero">
+    <div class="in">
+      <div class="ring" aria-label="Percent verified">
+        <svg viewBox="0 0 120 120"><circle class="bgc" cx="60" cy="60" r="54" fill="none" stroke-width="10"/>
+          <circle class="fg" id="ring" cx="60" cy="60" r="54" fill="none" stroke-width="10" stroke-dasharray="339.29" stroke-dashoffset="339.29"/>
+          <circle class="rd" cx="60" cy="60" r="43" fill="none" stroke-width="2" stroke-dasharray="4 8" opacity=".9"/></svg>
+        <div class="lbl"><div class="pct" id="sPct">0.00%</div><div class="cap">verified</div></div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><span class="k">Verified accurate</span><span class="v" id="sVer">0</span><span class="s" id="sVerOf">of 0 stock products</span><div class="bar"><i id="verBar"></i></div></div>
+        <div class="kpi"><span class="k">Still to check</span><span class="v" id="sTodo">0</span><span class="s">not verified yet</span></div>
+        <div class="kpi"><span class="k">Warehouse export</span><span class="v date" id="sExport">—</span><span class="s" id="sExportSub">no export loaded</span></div>
+      </div>
     </div>
+    <div class="waves" aria-hidden="true"><svg viewBox="0 0 2880 120" preserveAspectRatio="none"><path class="w1" style="fill:#ffffff" d="M0 52 Q 360 12 720 52 T 1440 52 T 2160 52 T 2880 52 V120 H0 Z"/><path class="w2" style="fill:#ffffff" d="M0 64 Q 360 98 720 64 T 1440 64 T 2160 64 T 2880 64 V120 H0 Z"/><path class="w3" style="fill:var(--bg)" d="M0 80 Q 360 54 720 80 T 1440 80 T 2160 80 T 2880 80 V120 H0 Z"/></svg></div>
+  </section>
+
+  <div class="main">
     <div class="msg" id="appMsg" hidden></div>
 
     <!-- Tracker -->
-    <div id="tTrack" style="display:grid;gap:16px">
-      <section class="summary" aria-label="Progress">
-        <div class="stat hud"><span class="shine"></span><span class="k">Verified accurate</span><span class="v" id="sVer">–</span><div class="seg-bar" id="segBar"></div></div>
-        <div class="stat"><span class="shine"></span><span class="k">Not checked yet</span><span class="v" id="sTodo">–</span></div>
-        <div class="stat hud"><span class="shine"></span><span class="k">Accuracy progress</span>
-          <div class="gauge">
-            <svg viewBox="0 0 100 100" aria-hidden="true">
-              <circle class="ticks" cx="50" cy="50" r="46" fill="none" stroke-width="3" stroke-dasharray="1 3.82"/>
-              <circle class="ring-bg" cx="50" cy="50" r="38" fill="none" stroke-width="6"/>
-              <circle class="ring" id="ring" cx="50" cy="50" r="38" fill="none" stroke-width="6" stroke-dasharray="238.76" stroke-dashoffset="238.76" transform="rotate(-90 50 50)"/>
-              <circle class="inner" cx="50" cy="50" r="29" fill="none" stroke-width="1" stroke-dasharray="14 6"/>
-              <g class="orbit"><circle cx="50" cy="12" r="2.4"/></g>
-              <text x="50" y="56" text-anchor="middle" id="sPct">0.00%</text>
-            </svg>
-            <span class="meta" id="sPctNote">of stock products confirmed</span>
-          </div>
-        </div>
-      </section>
-      <div class="controls">
-        <div class="seg" role="group" aria-label="Status filter" id="seg">
+    <section class="card" id="tTrack">
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Status" id="seg">
           <button data-f="all" aria-pressed="true">All</button>
           <button data-f="todo" aria-pressed="false">Not checked</button>
           <button data-f="ok" aria-pressed="false">Verified</button>
         </div>
-        <input type="search" id="q" placeholder="Search code, product or supplier" aria-label="Search products">
-        <select id="sup" aria-label="Supplier"><option value="">All suppliers</option></select>
-        <label class="meta"><input type="checkbox" id="ns"> Show non-stock lines</label>
-        <button class="btn ghost" id="dl" type="button">&#8681; Download status</button>
+        <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input type="search" id="q" placeholder="Search code, product or supplier" aria-label="Search products"></label>
+        <label class="toggle"><input type="checkbox" id="ns"> Non-stock lines</label>
+        <div class="menu" id="dlMenu">
+          <button class="btn ghost" id="dlBtn" type="button" aria-haspopup="true" aria-expanded="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>Download</button>
+          <div class="menu-list" id="dlList" hidden>
+            <button type="button" data-dl="all">Everything<small>All stock products and their status</small></button>
+            <button type="button" data-dl="view">Current view<small>Only the rows shown with your filters</small></button>
+          </div>
+        </div>
       </div>
-      <div class="tablewrap hud">
+      <div class="chips" id="chips" hidden></div>
       <div class="tablebox">
         <table>
-          <thead><tr><th>Code</th><th>Product</th><th class="num">Physical</th><th>UM</th><th class="num">Available</th><th class="num">Reserved</th><th>Supplier</th><th>Status</th><th></th></tr></thead>
-          <tbody id="rows"><tr><td colspan="9" class="meta">Loading products…</td></tr></tbody>
+          <thead><tr id="thead"></tr></thead>
+          <tbody id="rows"></tbody>
         </table>
       </div>
-      </div>
-      <div class="foot"><span id="shown"></span><span>Verified products stay verified until you undo them.</span></div>
-    </div>
+      <div class="foot"><span id="shown"></span><span>Click a column name to sort. Use the filter icon for Excel-style filters.</span></div>
+    </section>
 
-    <!-- Upload (owner) -->
-    <div id="tUpload" hidden style="display:grid;gap:20px">
+    <!-- Upload -->
+    <div id="tUpload" hidden style="display:grid;gap:18px">
       <section class="card">
-        <h2>Batch mark accurate</h2>
-        <div class="two">
-          <label class="drop" id="bDrop" for="bFile">
-            <span><strong>Drop a spreadsheet here</strong> or click to choose one</span>
-            <span>.xlsx, .xls or .csv. Uses the "Code" column, or the first column if there isn't one.</span>
-            <input type="file" id="bFile" accept=".xlsx,.xls,.csv,.txt" hidden>
-          </label>
-          <textarea id="bPaste" placeholder="Or paste product codes, one per line or separated by commas&#10;CY98&#10;SMSSMB" aria-label="Paste product codes"></textarea>
+        <h3>Batch mark accurate</h3>
+        <p class="hint">Drop a spreadsheet with a "Code" column, or paste codes. Nothing is saved until you confirm.</p>
+        <div class="grid2">
+          <label class="drop" id="bDrop" for="bFile"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span><strong>Drop a spreadsheet</strong> or click to choose</span><span>.xlsx, .xls or .csv</span>
+            <input type="file" id="bFile" accept=".xlsx,.xls,.csv,.txt" hidden></label>
+          <textarea id="bPaste" placeholder="Or paste product codes, one per line&#10;CY98&#10;SMSSMB" aria-label="Paste product codes"></textarea>
         </div>
         <div class="preview" id="bPrev"></div>
-        <button class="btn" id="bGo" hidden type="button">Mark accurate</button>
+        <div><button class="btn" id="bGo" hidden type="button">Mark accurate</button></div>
       </section>
-
       <section class="card">
-        <h2>Load a new warehouse export</h2>
-        <p class="meta" style="margin:0">Upload the full product export (.xlsx) to replace the product list and counts. Products you've already verified stay verified.</p>
-        <label class="drop" id="eDrop" for="eFile">
-          <span><strong>Drop the export here</strong> or click to choose it</span>
-          <span>Needs the columns Code, Description and Physical</span>
-          <input type="file" id="eFile" accept=".xlsx,.xls,.csv" hidden>
-        </label>
+        <h3>Load a new warehouse export</h3>
+        <p class="hint">Replaces the product list and counts. Products you've already verified stay verified.</p>
+        <label class="drop" id="eDrop" for="eFile"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span><strong>Drop the export</strong> or click to choose</span><span>Needs the columns Code, Description and Physical</span>
+          <input type="file" id="eFile" accept=".xlsx,.xls,.csv" hidden></label>
         <div class="preview" id="ePrev"></div>
-        <button class="btn" id="eGo" hidden type="button">Replace product list</button>
+        <div><button class="btn" id="eGo" hidden type="button">Replace product list</button></div>
       </section>
-
       <section class="card">
-        <h2>Supplier names</h2>
-        <p class="meta" style="margin:0">The warehouse export only has supplier codes. Upload a list of codes and names to show names everywhere. Use a spreadsheet with a "Code" column and a "Name" column, or paste one supplier per line like <b>1033, Mehadrin Dairy</b>.</p>
-        <div class="two">
-          <label class="drop" id="sDrop" for="sFile">
-            <span><strong>Drop the supplier list here</strong> or click to choose it</span>
-            <span>.xlsx, .xls or .csv with Code and Name columns</span>
-            <input type="file" id="sFile" accept=".xlsx,.xls,.csv,.txt" hidden>
-          </label>
+        <h3>Supplier names</h3>
+        <p class="hint">The export only has supplier codes. Upload a list with "Code" and "Name" columns, or paste lines like <b>1033, Mehadrin Dairy</b>.</p>
+        <div class="grid2">
+          <label class="drop" id="sDrop" for="sFile"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span><strong>Drop the supplier list</strong> or click to choose</span><span>.xlsx, .xls or .csv</span>
+            <input type="file" id="sFile" accept=".xlsx,.xls,.csv,.txt" hidden></label>
           <textarea id="sPaste" placeholder="1033, Mehadrin Dairy&#10;1050, Miller's Cheese" aria-label="Paste supplier codes and names"></textarea>
         </div>
         <div class="preview" id="sPrev"></div>
-        <button class="btn" id="sGo" hidden type="button">Save supplier names</button>
+        <div><button class="btn" id="sGo" hidden type="button">Save supplier names</button></div>
       </section>
     </div>
 
-    <!-- People (owner) -->
-    <div id="tPeople" hidden style="display:grid;gap:16px">
-      <section class="card">
-        <h2>People</h2>
-        <p class="meta" style="margin:0">Anyone can create an account on this site, but they see nothing until you set them to <b>Approved</b>. Send them the site link and ask them to create an account.</p>
-        <div class="tablebox" style="border:0">
-          <table style="min-width:520px">
-            <thead><tr><th>Email</th><th>Signed up</th><th>Access</th></tr></thead>
-            <tbody id="people"></tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+    <!-- People -->
+    <section class="card people" id="tPeople" hidden>
+      <h3>People</h3>
+      <p class="hint">Anyone can create an account, but they see nothing until you set them to <b>Approved</b>.</p>
+      <div class="tablebox" style="max-height:none"><table><thead><tr><th><div class="th">Email</div></th><th><div class="th">Signed up</div></th><th><div class="th">Access</div></th></tr></thead><tbody id="people"></tbody></table></div>
+    </section>
   </div>
 </div>
+
+<div id="fpop" hidden role="dialog" aria-label="Column filter"></div>
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
@@ -440,14 +481,26 @@ tbody tr.flash td { animation: rowFlash 1.4s ease-out; }
 "use strict";
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const fmt = n => n == null ? "" : (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
+const fmt = n => n == null || n === "" ? "" : (Math.round(n * 100) / 100).toLocaleString(undefined, { maximumFractionDigits: 2 });
 const fmtDate = iso => { try { return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); } catch { return ""; } };
 const isNonStock = code => /[\s()]/.test(code);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-let flashCode = null;
-const views = ["vNoConfig", "vAuth", "vNewPw", "vPending", "vApp"];
-const show = v => views.forEach(id => $(id).hidden = id !== v);
+const AUTH_VIEWS = ["vNoConfig", "vAuth", "vNewPw", "vPending"];
+function show(v) {
+  const inAuth = AUTH_VIEWS.includes(v);
+  $("authShell").hidden = !inAuth; $("vApp").hidden = v !== "vApp";
+  AUTH_VIEWS.forEach(id => $(id).hidden = id !== v);
+}
 function note(el, text, kind) { const m = $(el); m.hidden = !text; m.textContent = text || ""; m.className = "msg" + (kind ? " " + kind : ""); }
+function toast(text, kind = "ok") {
+  const t = document.createElement("div"); t.className = "toast" + (kind === "err" ? " err" : ""); t.textContent = text;
+  $("toasts").appendChild(t);
+  setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 320); }, 3200);
+}
+const ICON_OK = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>`;
+const ICON_FILTER = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8v6l-4-2v-4z"/></svg>`;
+const ICON_ARROW = `<svg class="arr" viewBox="0 0 10 10" width="10" height="10"><path d="M5 2v6M2 5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>`;
 
 const cfg = window.APP_CONFIG || {};
 if (!cfg.SUPABASE_URL || !cfg.SUPABASE_URL.startsWith("http") || !cfg.SUPABASE_KEY || cfg.SUPABASE_KEY.startsWith("PASTE")) {
@@ -460,195 +513,56 @@ const siteUrl = location.origin + location.pathname;
 let suppliers = {};
 const supKey = c => String(c ?? "").trim().replace(/^0+(?=\d)/, "").toLowerCase();
 const supName = c => suppliers[supKey(c)] || "";
-let me = null, role = null, products = [], checks = {}, profiles = [], filter = "all", recovering = false;
+let me = null, role = null, products = [], checks = {}, profiles = [], statusFilter = "all", recovering = false, loaded = false, exportInfo = {};
 
-
-// ================= Background motion: hex grid, runners, network =================
-(function () {
-  const cv = document.getElementById("fx");
-  if (!cv || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  const ctx = cv.getContext("2d");
-  const S = 26, H = Math.sqrt(3) * S;            // flat-top hex: side S
-  let W = 0, Ht = 0, dpr = 1, grid = null, runners = [], nodes = [], flashes = [], last = performance.now();
-  const CY = "63,227,246", AM = "243,180,49";
-
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = innerWidth; Ht = innerHeight;
-    cv.width = W * dpr; cv.height = Ht * dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    grid = document.createElement("canvas");
-    grid.width = W * dpr; grid.height = Ht * dpr;
-    const g = grid.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.strokeStyle = "rgba(29,108,128,.16)"; g.lineWidth = 1;
-    for (let c = -1; c * 1.5 * S < W + S * 2; c++) for (let r = -1; r * H < Ht + H; r++) {
-      const [x, y] = center(c, r); g.beginPath();
-      for (let k = 0; k <= 6; k++) { const a = Math.PI / 3 * k; g.lineTo(x + S * Math.cos(a), y + S * Math.sin(a)); }
-      g.stroke();
-    }
-    runners = Array.from({ length: Math.round(Math.min(26, W * Ht / 52000)) }, newRunner);
-    nodes = Array.from({ length: Math.round(Math.min(22, W / 60)) }, () => ({
-      x: Math.random() * W, y: Math.random() * Ht, vx: (Math.random() - .5) * 14, vy: (Math.random() - .5) * 14, amber: Math.random() < .25 }));
-  }
-  const center = (c, r) => [c * 1.5 * S, r * H + (c & 1 ? H / 2 : 0)];
-
-  function newRunner() {
-    const c = Math.floor(Math.random() * (W / (1.5 * S))), r = Math.floor(Math.random() * (Ht / H));
-    const [x, y] = center(c, r);
-    return { x: x + S, y, off: 0, dir: null, prog: 0, from: null, trail: [], life: 3 + Math.random() * 5,
-      speed: 70 + Math.random() * 90, amber: Math.random() < .22 };
-  }
-  function pickDir(rn) {
-    const opts = [0, 120, 240].map(a => a + rn.off).filter(a => rn.dir == null || ((a - rn.dir + 540) % 360) !== 0 || false)
-      .filter(a => rn.dir == null || Math.abs(((a - (rn.dir + 180)) % 360 + 360) % 360) > 1);
-    rn.dir = opts[Math.floor(Math.random() * opts.length)] % 360;
-    rn.from = [rn.x, rn.y]; rn.prog = 0;
-  }
-
-  function frame(t) {
-    const dt = Math.min(.05, (t - last) / 1000); last = t;
-    ctx.clearRect(0, 0, W, Ht);
-    if (grid) ctx.drawImage(grid, 0, 0, W, Ht);
-
-    // hex cells flashing on
-    if (Math.random() < dt * 3) {
-      const c = Math.floor(Math.random() * (W / (1.5 * S))), r = Math.floor(Math.random() * (Ht / H));
-      flashes.push({ c, r, a: 1, amber: Math.random() < .3 });
-    }
-    flashes = flashes.filter(f => (f.a -= dt * .7) > 0);
-    for (const f of flashes) {
-      const [x, y] = center(f.c, f.r); ctx.beginPath();
-      for (let k = 0; k <= 6; k++) { const a = Math.PI / 3 * k; ctx.lineTo(x + (S - 2) * Math.cos(a), y + (S - 2) * Math.sin(a)); }
-      ctx.fillStyle = `rgba(${f.amber ? AM : CY},${f.a * .08})`; ctx.fill();
-      ctx.strokeStyle = `rgba(${f.amber ? AM : CY},${f.a * .5})`; ctx.lineWidth = 1; ctx.stroke();
-    }
-
-    // runners along hex edges
-    for (let i = 0; i < runners.length; i++) {
-      const rn = runners[i];
-      if (rn.dir == null) pickDir(rn);
-      rn.prog += rn.speed * dt;
-      const rad = rn.dir * Math.PI / 180;
-      if (rn.prog >= S) {
-        rn.x = rn.from[0] + S * Math.cos(rad); rn.y = rn.from[1] + S * Math.sin(rad);
-        rn.trail.push([rn.x, rn.y]); if (rn.trail.length > 7) rn.trail.shift();
-        rn.off = rn.off ? 0 : 60; pickDir(rn);
-      } else { rn.x = rn.from[0] + rn.prog * Math.cos(rad); rn.y = rn.from[1] + rn.prog * Math.sin(rad); }
-      rn.life -= dt;
-      const col = rn.amber ? AM : CY, pts = [...rn.trail, [rn.x, rn.y]];
-      for (let k = 1; k < pts.length; k++) {
-        ctx.strokeStyle = `rgba(${col},${(k / pts.length) * .9})`; ctx.lineWidth = 1.6;
-        ctx.beginPath(); ctx.moveTo(pts[k - 1][0], pts[k - 1][1]); ctx.lineTo(pts[k][0], pts[k][1]); ctx.stroke();
-      }
-      ctx.shadowColor = `rgb(${col})`; ctx.shadowBlur = 10; ctx.fillStyle = `rgb(${col})`;
-      ctx.fillRect(rn.x - 2, rn.y - 2, 4, 4); ctx.shadowBlur = 0;
-      if (rn.life <= 0 || rn.x < -40 || rn.y < -40 || rn.x > W + 40 || rn.y > Ht + 40) runners[i] = newRunner();
-    }
-
-    // drifting network of points
-    for (const n of nodes) {
-      n.x += n.vx * dt; n.y += n.vy * dt;
-      if (n.x < 0 || n.x > W) n.vx *= -1; if (n.y < 0 || n.y > Ht) n.vy *= -1;
-    }
-    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
-      const a = nodes[i], b = nodes[j], d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (d < 220) { ctx.strokeStyle = `rgba(${CY},${(1 - d / 220) * .28})`; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
-    }
-    for (const n of nodes) {
-      const col = n.amber ? AM : CY;
-      ctx.strokeStyle = `rgba(${col},.8)`; ctx.lineWidth = 1;
-      ctx.strokeRect(n.x - 4, n.y - 4, 8, 8);
-      ctx.fillStyle = `rgb(${col})`; ctx.fillRect(n.x - 1.5, n.y - 1.5, 3, 3);
-    }
-    raf = requestAnimationFrame(frame);
-  }
-  let raf = 0;
-  resize(); addEventListener("resize", () => { clearTimeout(resize.t); resize.t = setTimeout(resize, 150); });
-  document.addEventListener("visibilitychange", () => {
-    if (document.hidden) cancelAnimationFrame(raf); else { last = performance.now(); raf = requestAnimationFrame(frame); }
-  });
-  raf = requestAnimationFrame(frame);
-})();
-
-// ---------------- Decode overlay ----------------
-const GLYPHS = "0123456789ABCDEFXYZ#$%&@<>/\\{}[]=+*ΣΔΛΞΨΩ";
-const rnd = n => Array.from({ length: n }, () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)]).join("");
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-function scrambleTo(el, text, dur = 900) {
+// ================= Transition (sign in / sign out) =================
+const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+function scrambleTo(el, text, dur = 700) {
   if (reduceMotion) { el.textContent = text; return Promise.resolve(); }
   return new Promise(res => {
     const t0 = performance.now();
     const step = t => {
-      const k = Math.min(1, (t - t0) / dur), shown = Math.floor(text.length * k);
-      el.textContent = text.slice(0, shown) + Array.from(text.slice(shown), c => c === " " ? " " : GLYPHS[Math.floor(Math.random() * GLYPHS.length)]).join("");
+      const k = Math.min(1, (t - t0) / dur), n = Math.floor(text.length * k);
+      el.textContent = text.slice(0, n) + Array.from(text.slice(n), c => c === " " ? " " : GLYPHS[Math.random() * GLYPHS.length | 0]).join("");
       if (k < 1) requestAnimationFrame(step); else { el.textContent = text; res(); }
     };
     requestAnimationFrame(step);
   });
 }
-const decode = (() => {
-  const box = $("decode"), cv = $("rain"), cx = cv.getContext("2d");
-  let raf = 0, logTimer = 0, scrTimer = 0, drops = [], prog = 0;
-  function rain() {
-    const w = cv.width = innerWidth, h = cv.height = innerHeight, fs = 16;
-    drops = Array.from({ length: Math.ceil(w / fs) }, () => Math.random() * -h / fs);
-    cx.fillStyle = "#020508"; cx.fillRect(0, 0, w, h);
-    const draw = () => {
-      cx.fillStyle = "rgba(2,5,8,.16)"; cx.fillRect(0, 0, w, h);
-      cx.font = fs + "px 'Share Tech Mono', monospace";
-      drops.forEach((y, i) => {
-        const ch = GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
-        cx.fillStyle = Math.random() < .06 ? "#f3b431" : (Math.random() < .5 ? "#3fe3f6" : "#1b8fa3");
-        cx.fillText(ch, i * fs, y * fs);
-        drops[i] = y * fs > h && Math.random() > .97 ? 0 : y + 1;
-      });
-      raf = requestAnimationFrame(draw);
-    };
-    draw();
-  }
-  function logLine() {
-    const verbs = ["HANDSHAKE", "KEY EXCHANGE", "SYNC LEDGER", "VERIFY TOKEN", "MAP SKU INDEX", "DECRYPT BLOCK", "ROUTE NODE", "CHECKSUM"];
-    const l = `> ${verbs[Math.floor(Math.random() * verbs.length)].padEnd(14)} 0x${rnd(4)}-${rnd(4)} ${".".repeat(3 + Math.floor(Math.random() * 6))} OK`;
-    const el = $("dcLog"); el.textContent = (el.textContent + "\n" + l).split("\n").slice(-4).join("\n");
-    prog = Math.min(92, prog + 4 + Math.random() * 9); $("dcBar").style.width = prog + "%";
-  }
+const trans = (() => {
+  const box = $("trans"); let timer = 0, prog = 0, loop = 0;
   return {
-    async start(title, sub) {
-      box.classList.remove("granted", "denied"); prog = 0; $("dcBar").style.width = "0%"; $("dcLog").textContent = "";
-      box.hidden = false; requestAnimationFrame(() => box.classList.add("on"));
-      if (!reduceMotion) { rain(); logTimer = setInterval(logLine, 130); }
-      $("dcSub").textContent = sub;
-      clearInterval(scrTimer);
-      scrTimer = setInterval(() => { $("dcTitle").textContent = rnd(title.length); }, 60);
-      await sleep(500); clearInterval(scrTimer); await scrambleTo($("dcTitle"), title, 700);
-      scrTimer = setInterval(() => { const t = $("dcTitle"); t.textContent = title + " " + ".".repeat((Date.now() / 300 | 0) % 4); }, 300);
+    async start(text) {
+      box.className = ""; box.hidden = false; prog = 0; $("tBar").style.width = "0%"; $("tText").textContent = "";
+      void box.offsetWidth; box.classList.add("on");
+      clearInterval(timer); timer = setInterval(() => { prog = Math.min(90, prog + 3 + Math.random() * 8); $("tBar").style.width = prog + "%"; }, 160);
+      await sleep(reduceMotion ? 0 : 450);
+      await scrambleTo($("tText"), text, 650);
+      clearInterval(loop); loop = setInterval(() => { scrambleTo($("tText"), text, 500); }, 1400);
     },
-    async finish(title, sub, ok = true) {
-      clearInterval(scrTimer); clearInterval(logTimer);
-      box.classList.add(ok ? "granted" : "denied");
-      $("dcBar").style.width = "100%"; $("dcSub").textContent = sub;
-      await scrambleTo($("dcTitle"), title, 600); await sleep(650);
-      box.classList.remove("on"); await sleep(380);
-      box.hidden = true; cancelAnimationFrame(raf);
+    async finish(text, ok = true) {
+      clearInterval(timer); clearInterval(loop);
+      if (!ok) box.classList.add("denied");
+      $("tBar").style.width = "100%";
+      await scrambleTo($("tText"), text, 500); await sleep(reduceMotion ? 300 : 700);
+      box.classList.add("leave"); await sleep(reduceMotion ? 0 : 720);
+      box.hidden = true; box.className = "";
     },
   };
 })();
 async function waitFor(cond, ms) { const t0 = Date.now(); while (!cond() && Date.now() - t0 < ms) await sleep(100); }
-setInterval(() => { if (!$("vAuth").hidden) $("authHex").textContent = rnd(4); }, 220);
 
-// ---------------- Auth ----------------
+// ================= Auth =================
 let authMode = "signin";
 function setAuthMode(m) {
   authMode = m;
   $("authBtn").textContent = m === "signin" ? "Sign in" : m === "signup" ? "Create account" : "Send reset link";
+  $("authTitle").textContent = m === "signin" ? "Welcome back" : m === "signup" ? "Create your account" : "Reset your password";
   $("pwWrap").hidden = m === "reset";
   $("authPw").autocomplete = m === "signup" ? "new-password" : "current-password";
-  $("toSignup").hidden = m === "signup";
-  $("toSignin").hidden = m === "signin";
-  $("toReset").hidden = m === "reset";
-  $("authIntro").textContent = m === "signup" ? "Create an account. The owner will approve it before you can see the inventory."
-    : m === "reset" ? "Enter your email and we'll send you a link to set a new password." : "Sign in to see the inventory tracker.";
+  $("toSignup").hidden = m === "signup"; $("toSignin").hidden = m === "signin"; $("toReset").hidden = m === "reset";
+  $("authIntro").textContent = m === "signup" ? "The owner approves new accounts before they can see the inventory."
+    : m === "reset" ? "We'll email you a link to set a new password." : "Sign in to see the inventory tracker.";
   note("authMsg", "");
 }
 $("toSignup").onclick = () => setAuthMode("signup");
@@ -662,14 +576,16 @@ $("authForm").addEventListener("submit", async e => {
   $("authBtn").disabled = true;
   try {
     if (authMode === "signin") {
-      const shown = Date.now();
-      await decode.start("AUTHENTICATING", "VERIFYING CREDENTIALS");
+      const t0 = Date.now();
+      await trans.start("Signing in");
       const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) { await decode.finish("ACCESS DENIED", "CREDENTIALS REJECTED", false); throw error; }
+      if (error) { await trans.finish("Access denied", false); throw error; }
       await waitFor(() => !$("vApp").hidden || !$("vPending").hidden, 10000);
-      await sleep(Math.max(0, 1800 - (Date.now() - shown)));
+      await waitFor(() => loaded || !$("vPending").hidden, 10000);
+      await sleep(Math.max(0, 1600 - (Date.now() - t0)));
       resetCounters();
-      await decode.finish("ACCESS GRANTED", "WELCOME, " + email.split("@")[0].toUpperCase());
+      const name = email.split("@")[0];
+      await trans.finish("Welcome, " + name.charAt(0).toUpperCase() + name.slice(1));
       $("authPw").value = "";
       render();
     } else if (authMode === "signup") {
@@ -695,32 +611,31 @@ $("newPwForm").addEventListener("submit", async e => {
   recovering = false; note("newPwMsg", "Password saved.", "ok"); setTimeout(route, 800);
 });
 document.querySelectorAll("[data-signout]").forEach(b => b.onclick = async () => {
-  const shown = Date.now();
-  await decode.start("TERMINATING SESSION", "CLEARING ACCESS KEYS");
+  const t0 = Date.now();
+  await trans.start("Signing out");
   await sb.auth.signOut();
-  await sleep(Math.max(0, 1500 - (Date.now() - shown)));
-  resetCounters();
-  await decode.finish("SESSION CLOSED", "GOODBYE");
-  scrambleTo($("authTitle"), "INVENTORY ACCURACY", 900);
+  await sleep(Math.max(0, 1300 - (Date.now() - t0)));
+  resetCounters(); loaded = false;
+  await trans.finish("See you soon");
 });
-
 sb.auth.onAuthStateChange((event, session) => {
   if (event === "PASSWORD_RECOVERY") { recovering = true; show("vNewPw"); return; }
   const id = session?.user?.id || null;
   if (event === "INITIAL_SESSION" || id !== (me?.id || null)) { me = session?.user || null; setTimeout(route, 0); }
 });
-
 async function route() {
   if (recovering) return show("vNewPw");
-  if (!me) { setAuthMode("signin"); show("vAuth"); scrambleTo($("authTitle"), "INVENTORY ACCURACY", 1100); return; }
+  if (!me) { setAuthMode("signin"); show("vAuth"); return; }
   const { data, error } = await sb.from("profiles").select("role").eq("id", me.id).maybeSingle();
   role = error ? null : data?.role;
   if (role === "owner" || role === "viewer") {
-    if ($("vApp").hidden) { $("vApp").classList.add("booting"); setTimeout(() => $("vApp").classList.remove("booting"), 1200); }
+    if ($("vApp").hidden) { $("vApp").classList.add("booting"); setTimeout(() => $("vApp").classList.remove("booting"), 1400); }
     show("vApp");
     $("whoEmail").textContent = me.email;
+    $("avatar").textContent = (me.email || "?").charAt(0).toUpperCase();
     $("roTag").hidden = role === "owner";
     $("tabs").hidden = role !== "owner";
+    if (!loaded) skeleton();
     await loadAll();
   } else {
     $("pendEmail").textContent = me.email;
@@ -729,7 +644,7 @@ async function route() {
 }
 $("pendRefresh").onclick = route;
 
-// ---------------- Data ----------------
+// ================= Data =================
 async function fetchAll(table, cols) {
   const out = [];
   for (let from = 0; ; from += 1000) {
@@ -750,128 +665,341 @@ async function loadAll() {
     const meta = Object.fromEntries((m.data || []).map(x => [x.key, x.value]));
     try { suppliers = JSON.parse(meta.suppliers || "{}"); } catch { suppliers = {}; }
     const stock = products.filter(x => !x.non_stock).length;
-    $("meta").textContent = products.length
-      ? `EXPORT ${meta.export_date || "—"} · ${stock.toLocaleString()} SKU`
-      : "NO PRODUCTS LOADED";
-    const sel = $("sup"), cur = sel.value;
-    sel.innerHTML = `<option value="">All suppliers</option>` + [...new Set(products.map(x => x.supplier).filter(Boolean))]
-      .map(c => [c, supName(c) || "Supplier " + c]).sort((a, b) => a[1].localeCompare(b[1]))
-      .map(([c, n]) => `<option value="${esc(c)}">${esc(n)}</option>`).join("");
-    sel.value = cur;
+    exportInfo = { date: meta.export_date || "", stock };
+    $("meta").textContent = products.length ? [meta.export_date ? `Export ${meta.export_date}` : "", `${stock.toLocaleString()} products`].filter(Boolean).join(" · ") : "No products loaded";
+    const ed = String(meta.export_date || "");
+    $("sExport").textContent = ed ? ed.split(" ")[0] : products.length ? "Loaded" : "—";
+    $("sExportSub").textContent = products.length ? [ed.split(" ").slice(1).join(" "), `${products.length.toLocaleString()} lines`].filter(Boolean).join(" · ") : "no export loaded";
     if (role === "owner") await loadPeople();
     note("appMsg", !products.length && role === "owner" ? "Start by loading your warehouse export in the Upload tab." : "");
+    loaded = true;
     render();
   } catch (err) { note("appMsg", "Couldn't load the inventory: " + (err.message || err), "err"); }
 }
-$("refresh").onclick = loadAll;
-const tick = () => { $("clock").textContent = new Date().toLocaleTimeString(undefined, { hour12: false }); };
-tick(); setInterval(tick, 1000);
-const hx = () => Array.from({ length: 3 }, () => Math.floor(Math.random() * 65536).toString(16).toUpperCase().padStart(4, "0")).join(" ");
-if (!reduceMotion) setInterval(() => { $("hexcode").textContent = "0x" + hx(); }, 140);
+$("refresh").onclick = async () => { const b = $("refresh"); b.classList.remove("spin"); void b.offsetWidth; b.classList.add("spin"); await loadAll(); };
 let lastFocus = Date.now();
 window.addEventListener("focus", () => { if (Date.now() - lastFocus > 30000 && !$("vApp").hidden) { lastFocus = Date.now(); loadAll(); } });
+const statusOf = p => checks[p.code] ? "ok" : "todo";
 
-function statusOf(p) {
-  const c = checks[p.code];
-  if (!c) return "todo";
-  return "ok";
-}
-
-let countDur = 1800;                                    // long count on first load / sign-in
+// ================= KPI counters =================
+let countDur = 1800;
 function resetCounters() {
   countDur = 1800;
   for (const id of ["sVer", "sTodo", "sPct"]) { const el = $(id); el.dataset.n = 0; el.textContent = id === "sPct" ? "0.00%" : "0"; }
   setGauge(0);
 }
 function setGauge(pct) {
-  $("ring").style.strokeDashoffset = String(238.76 * (1 - pct / 100));
-  $("segBar").innerHTML = Array.from({ length: 20 }, (_, i) => `<i class="${pct >= (i + 1) * 5 ? "on" : ""}"></i>`).join("");
+  $("ring").style.strokeDashoffset = String(339.29 * (1 - pct / 100));
+  $("verBar").style.width = pct + "%";
 }
 function countTo(el, value, { suffix = "", dec = 0, onStep = null } = {}) {
   const from = Number(el.dataset.n ?? 0);
-  if (from === value && el.dataset.n != null) {
-    if (el.dataset.sfx !== suffix && el.dataset.busy !== "1") { el.dataset.sfx = suffix; if (suffix.includes("<")) el.innerHTML = (dec ? value.toFixed(dec) : value.toLocaleString()) + suffix; else el.textContent = (dec ? value.toFixed(dec) : value.toLocaleString()) + suffix; }
-    else el.dataset.sfx = suffix;
-    return;
-  }
-  el.dataset.n = value; el.dataset.sfx = suffix;
-  const fmtN = v => dec ? v.toFixed(dec) : Math.round(v).toLocaleString();
-  const put = v => { const sf = el.dataset.sfx ?? suffix; if (sf.includes("<")) el.innerHTML = fmtN(v) + sf; else el.textContent = fmtN(v) + sf; if (onStep) onStep(v); };
-  if (reduceMotion) { put(value); return; }
+  if (from === value && el.dataset.n != null && el.dataset.busy !== "1") return;
+  if (from === value && el.dataset.n != null) return;
+  el.dataset.n = value;
+  const f = v => (dec ? v.toFixed(dec) : Math.round(v).toLocaleString()) + suffix;
+  if (reduceMotion) { el.textContent = f(value); if (onStep) onStep(value); return; }
   const t0 = performance.now(), dur = countDur;
-  el.classList.remove("tick"); void el.offsetWidth; el.classList.add("tick");
   el.dataset.busy = "1";
   const step = t => {
     if (el.dataset.n != value) return;
-    const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-    put(from + (value - from) * e);
-    if (k < 1) requestAnimationFrame(step); else { el.dataset.busy = "0"; put(Number(el.dataset.n)); }
+    const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3), v = from + (value - from) * e;
+    el.textContent = f(v); if (onStep) onStep(v);
+    if (k < 1) requestAnimationFrame(step); else el.dataset.busy = "0";
   };
   requestAnimationFrame(step);
 }
-function render() {
-  const q = $("q").value.trim().toLowerCase(), sup = $("sup").value, showNs = $("ns").checked, owner = role === "owner";
-  const stock = products.filter(p => !p.non_stock);
-  let ok = 0;
-  for (const p of stock) if (statusOf(p) === "ok") ok++;
-  const total = stock.length;
-  if (!$("decode").hidden) { /* hold the count-up until the sign-in screen clears */ }
-  else {
-    countTo($("sVer"), ok, { suffix: ` <small>of ${total.toLocaleString()}</small>` });
-    countTo($("sTodo"), total - ok);
-    const pct = total ? Math.round(ok / total * 10000) / 100 : 0;
-    countTo($("sPct"), pct, { suffix: "%", dec: 2, onStep: setGauge });
-    if (products.length) setTimeout(() => { countDur = 700; }, 50);
-  }
+function renderKpis() {
+  if (!$("trans").hidden) return;                // hold until the sign-in screen clears
+  const stock = products.filter(p => !p.non_stock), total = stock.length;
+  const ok = stock.filter(p => checks[p.code]).length;
+  $("sVerOf").textContent = `of ${total.toLocaleString()} stock products`;
+  countTo($("sVer"), ok);
+  countTo($("sTodo"), total - ok);
+  countTo($("sPct"), total ? Math.round(ok / total * 10000) / 100 : 0, { suffix: "%", dec: 2, onStep: setGauge });
+  if (products.length) setTimeout(() => { countDur = 650; }, 50);
+}
 
-  const list = products.filter(p => (showNs || !p.non_stock) && (!sup || p.supplier === sup)
-    && (filter === "all" || statusOf(p) === filter)
+// ================= Columns + Excel-style filters =================
+const COLS = [
+  { key: "code", label: "Code", type: "text", get: p => p.code },
+  { key: "description", label: "Product", type: "text", get: p => p.description || "" },
+  { key: "supplier", label: "Supplier", type: "text", get: p => supName(p.supplier) || p.supplier || "" },
+  { key: "physical", label: "Physical", type: "num", get: p => Number(p.physical) },
+  { key: "um", label: "UM", type: "text", get: p => p.um || "" },
+  { key: "available", label: "Available", type: "num", get: p => p.available == null ? null : Number(p.available) },
+  { key: "reserved", label: "Reserved", type: "num", get: p => p.reserved == null ? null : Number(p.reserved) },
+  { key: "status", label: "Status", type: "text", get: p => checks[p.code] ? "Verified" : "Not checked" },
+  { key: "checked", label: "Verified on", type: "date", get: p => checks[p.code] ? new Date(checks[p.code].checked_at).toLocaleDateString("en-CA") : "" },
+];
+const colBy = Object.fromEntries(COLS.map(c => [c.key, c]));
+let filters = {}, sort = { key: "code", dir: 1 };
+const display = (c, v) => v === null || v === "" ? "(Blanks)" : c.type === "num" ? fmt(v) : String(v);
+function isActive(f) { return f && (f.values || f.text || (f.op && f.op !== "any")); }
+function passCol(p, c, f) {
+  if (!isActive(f)) return true;
+  const v = c.get(p);
+  if (f.values && !f.values.has(display(c, v))) return false;
+  if (f.text && !String(v ?? "").toLowerCase().includes(f.text.toLowerCase())) return false;
+  if (f.op && f.op !== "any") {
+    if (c.type === "num") {
+      if (v === null) return false;
+      const a = Number(f.a), b = Number(f.b);
+      if (f.op === "eq" && !(v === a)) return false;
+      if (f.op === "ne" && !(v !== a)) return false;
+      if (f.op === "gt" && !(v > a)) return false;
+      if (f.op === "lt" && !(v < a)) return false;
+      if (f.op === "ge" && !(v >= a)) return false;
+      if (f.op === "le" && !(v <= a)) return false;
+      if (f.op === "bt" && !(v >= Math.min(a, b) && v <= Math.max(a, b))) return false;
+    } else if (c.type === "date") {
+      if (f.op === "range") { if (!v) return false; if (f.a && v < f.a) return false; if (f.b && v > f.b) return false; }
+      if (f.op === "blank" && v) return false;
+    }
+  }
+  return true;
+}
+function baseRows() {
+  const q = $("q").value.trim().toLowerCase(), showNs = $("ns").checked;
+  return products.filter(p => (showNs || !p.non_stock)
+    && (statusFilter === "all" || statusOf(p) === statusFilter)
     && (!q || p.code.toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q) || supName(p.supplier).toLowerCase().includes(q)));
+}
+function viewRows(exceptKey) {
+  let rows = baseRows();
+  for (const c of COLS) if (c.key !== exceptKey && isActive(filters[c.key])) rows = rows.filter(p => passCol(p, c, filters[c.key]));
+  return rows;
+}
+function sortRows(rows) {
+  const c = colBy[sort.key]; if (!c) return rows;
+  return rows.slice().sort((a, b) => {
+    const x = c.get(a), y = c.get(b);
+    if (x === y) return 0;
+    if (x === null || x === "") return 1; if (y === null || y === "") return -1;
+    return (c.type === "num" ? x - y : String(x).localeCompare(String(y), undefined, { numeric: true, sensitivity: "base" })) * sort.dir;
+  });
+}
+function renderHead() {
+  $("thead").innerHTML = COLS.map(c => `<th class="${c.type === "num" ? "num" : ""}${sort.key === c.key ? " sorted" + (sort.dir < 0 ? " desc" : "") : ""}${isActive(filters[c.key]) ? " filtered" : ""}" aria-sort="${sort.key === c.key ? (sort.dir > 0 ? "ascending" : "descending") : "none"}">
+    <div class="th"><button class="sortlbl" data-sort="${c.key}" type="button">${c.label}${ICON_ARROW}</button>
+    <button class="fbtn" data-filter="${c.key}" type="button" aria-label="Filter ${c.label}" title="Filter ${c.label}">${ICON_FILTER}</button></div></th>`).join("")
+    ;
+}
+function renderChips() {
+  const act = COLS.filter(c => isActive(filters[c.key]));
+  $("chips").hidden = !act.length;
+  $("chips").innerHTML = act.map(c => {
+    const f = filters[c.key]; let d = [];
+    if (f.values) d.push(f.values.size === 1 ? [...f.values][0] : `${f.values.size} selected`);
+    if (f.text) d.push(`contains "${f.text}"`);
+    if (f.op && f.op !== "any") d.push(opText(c, f));
+    return `<span class="chip">${esc(c.label)}: ${esc(d.join(", "))}<button type="button" data-clear="${c.key}" aria-label="Remove ${esc(c.label)} filter"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M2 2l6 6M8 2 2 8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></span>`;
+  }).join("") + (act.length > 1 ? `<button class="link" data-clear="*" type="button">Clear all filters</button>` : "");
+}
+function opText(c, f) {
+  const n = { eq: "=", ne: "≠", gt: ">", lt: "<", ge: "≥", le: "≤" };
+  if (c.type === "num") return f.op === "bt" ? `between ${f.a} and ${f.b}` : `${n[f.op]} ${f.a}`;
+  if (f.op === "blank") return "not verified";
+  return `${f.a || "…"} to ${f.b || "…"}`;
+}
+$("chips").addEventListener("click", e => {
+  const b = e.target.closest("[data-clear]"); if (!b) return;
+  if (b.dataset.clear === "*") filters = {}; else delete filters[b.dataset.clear];
+  render();
+});
+
+let justMarked = null;
+function render() {
+  renderKpis();
+  renderHead(); renderChips();
+  const owner = role === "owner", list = sortRows(viewRows());
   $("rows").innerHTML = list.map(p => {
-    const s = statusOf(p), c = checks[p.code];
-    let pill = `<span class="pill none">Not checked</span>`;
-    if (s === "ok") pill = `<span class="pill ok">Accurate</span><span class="when">${fmtDate(c.checked_at)}</span>`;
-    if (p.non_stock) pill = `<span class="pill none">Non-stock</span>`;
-    const btn = !owner || p.non_stock ? "" : s === "ok"
-      ? `<button class="act" data-un="${esc(p.code)}">Undo</button>`
-      : `<button class="act primary" data-mk="${esc(p.code)}">Mark accurate</button>`;
-    return `<tr${p.code === flashCode ? ' class="flash"' : ""}><td class="code">${esc(p.code)}</td><td class="desc">${esc(p.description)}${p.pack ? `<div class="pack">${esc(p.pack)}</div>` : ""}</td>
-      <td class="num ${p.physical < 0 ? "neg" : ""}">${fmt(p.physical)}</td><td>${esc(p.um)}</td><td class="num">${fmt(p.available)}</td>
-      <td class="num">${fmt(p.reserved)}</td><td class="supp">${supName(p.supplier) ? `${esc(supName(p.supplier))}<span class="pack">${esc(p.supplier)}</span>` : `<span class="code">${esc(p.supplier || "—")}</span>`}</td><td>${pill}</td><td>${btn}</td></tr>`;
-  }).join("") || `<tr><td colspan="9" class="meta">${products.length ? "No products match these filters." : "No products loaded yet."}</td></tr>`;
+    const c = checks[p.code], s = c ? "ok" : "todo", name = supName(p.supplier);
+    const pill = p.non_stock ? `<span class="pill no">Non-stock</span>` : s === "ok" ? `<span class="pill ok">${ICON_OK}Verified</span>` : `<span class="pill no">Not checked</span>`;
+    const btn = !owner || p.non_stock ? "" : s === "ok" ? `<button class="act undo" data-un="${esc(p.code)}" type="button">Undo</button>` : `<button class="act" data-mk="${esc(p.code)}" type="button">Verify</button>`;
+    const num = v => v == null ? "" : `<span class="${v < 0 ? "neg" : v === 0 ? "zero" : ""}">${fmt(v)}</span>`;
+    return `<tr${p.code === justMarked ? ' class="just"' : ""}><td class="code">${esc(p.code)}</td>
+      <td class="prod">${esc(p.description)}${p.pack ? `<span class="sm-muted">${esc(p.pack)}</span>` : ""}</td>
+      <td class="sup">${name ? `${esc(name)}<span class="sm-muted">${esc(p.supplier)}</span>` : `<span class="sm-muted">${esc(p.supplier || "—")}</span>`}</td>
+      <td class="num">${num(Number(p.physical))}</td><td>${esc(p.um)}</td><td class="num">${num(p.available)}</td><td class="num">${num(p.reserved)}</td>
+      <td><div class="stcell">${pill}${btn}</div></td><td class="date">${c ? fmtDate(c.checked_at) : ""}</td></tr>`;
+  }).join("") || `<tr><td colspan="9" class="empty">${products.length ? "No products match these filters." : "No products loaded yet."}</td></tr>`;
   $("shown").textContent = `Showing ${list.length.toLocaleString()} of ${products.length.toLocaleString()} lines`;
+}
+function skeleton() {
+  renderHead();
+  $("rows").innerHTML = Array.from({ length: 8 }, () => `<tr class="skel">${COLS.map(() => `<td><span></span></td>`).join("")}</tr>`).join("");
 }
 $("seg").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
-  filter = b.dataset.f; for (const x of $("seg").children) x.setAttribute("aria-pressed", String(x === b)); render();
+  statusFilter = b.dataset.f; for (const x of $("seg").children) x.setAttribute("aria-pressed", String(x === b)); render();
 });
-let st; $("q").addEventListener("input", () => { clearTimeout(st); st = setTimeout(render, 120); });
-$("sup").onchange = render; $("ns").onchange = render;
+let st; $("q").addEventListener("input", () => { clearTimeout(st); st = setTimeout(render, 140); });
+$("ns").onchange = render;
+$("thead").addEventListener("click", e => {
+  const s = e.target.closest("[data-sort]"), f = e.target.closest("[data-filter]");
+  if (s) { const k = s.dataset.sort; sort = sort.key === k ? { key: k, dir: -sort.dir } : { key: k, dir: 1 }; render(); }
+  if (f) openFilter(f.dataset.filter, f);
+});
 
+// ---- filter popover ----
+let fpKey = null, fpSel = null, fpAll = [];
+function openFilter(key, anchor) {
+  const c = colBy[key], f = filters[key] || {}, pop = $("fpop");
+  if (fpKey === key && !pop.hidden) return closeFilter();
+  fpKey = key;
+  const counts = new Map();
+  for (const p of viewRows(key)) { const d = display(c, c.get(p)); counts.set(d, (counts.get(d) || 0) + 1); }
+  fpAll = [...counts.entries()].sort((a, b) => {
+    if (a[0] === "(Blanks)") return 1; if (b[0] === "(Blanks)") return -1;
+    if (c.type === "num") return Number(a[0].replace(/,/g, "")) - Number(b[0].replace(/,/g, ""));
+    return a[0].localeCompare(b[0], undefined, { numeric: true, sensitivity: "base" });
+  });
+  fpSel = f.values ? new Set(f.values) : new Set(fpAll.map(x => x[0]));
+  const sortLbl = c.type === "num" ? ["Smallest → Largest", "Largest → Smallest"] : c.type === "date" ? ["Oldest → Newest", "Newest → Oldest"] : ["A → Z", "Z → A"];
+  let cond = "";
+  if (c.type === "num") cond = `<div class="fp-sec"><span class="fp-lbl">Number filter</span>
+      <div class="fp-row"><select id="fpOp"><option value="any">Any value</option><option value="eq">Equals</option><option value="ne">Does not equal</option><option value="gt">Greater than</option><option value="ge">Greater or equal</option><option value="lt">Less than</option><option value="le">Less or equal</option><option value="bt">Between</option></select></div>
+      <div class="fp-row"><input type="number" id="fpA" step="any" placeholder="Value"><input type="number" id="fpB" step="any" placeholder="and" hidden></div>
+      <div class="fp-quick"><button type="button" data-q="zero">Zero</button><button type="button" data-q="neg">Negative</button><button type="button" data-q="pos">More than 0</button></div></div>`;
+  else if (c.type === "date") cond = `<div class="fp-sec"><span class="fp-lbl">Date range</span>
+      <div class="fp-row"><input type="date" id="fpA" aria-label="From"><input type="date" id="fpB" aria-label="To"></div>
+      <div class="fp-quick"><button type="button" data-q="today">Today</button><button type="button" data-q="week">Last 7 days</button><button type="button" data-q="blank">Not verified</button></div></div>`;
+  else cond = `<div class="fp-sec"><span class="fp-lbl">Text contains</span><input type="text" id="fpText" placeholder="Type to filter…" value="${esc(f.text || "")}"></div>`;
+  pop.innerHTML = `<div class="fp-h">${esc(c.label)}<button class="link" type="button" id="fpClose" aria-label="Close">Close</button></div>
+    <div class="fp-sec"><div class="fp-sort"><button type="button" data-dir="1" class="${sort.key === key && sort.dir > 0 ? "on" : ""}">${sortLbl[0]}</button><button type="button" data-dir="-1" class="${sort.key === key && sort.dir < 0 ? "on" : ""}">${sortLbl[1]}</button></div></div>
+    ${cond}
+    <div class="fp-sec" style="padding-bottom:4px"><span class="fp-lbl">Values</span><input type="text" id="fpSearch" placeholder="Search values…"></div>
+    <div class="fp-list" id="fpList"></div>
+    <div class="fp-f"><button class="btn ghost sm" type="button" id="fpClear">Clear filter</button><button class="btn sm" type="button" id="fpApply">Apply</button></div>`;
+  if (c.type !== "text") {
+    $("fpOp") && ($("fpOp").value = f.op || "any");
+    $("fpA").value = f.a ?? ""; $("fpB").value = f.b ?? "";
+    if ($("fpOp")) { const sync = () => { $("fpB").hidden = $("fpOp").value !== "bt"; $("fpA").hidden = $("fpOp").value === "any"; }; $("fpOp").onchange = sync; sync(); }
+  }
+  drawList();
+  pop.hidden = false; fpOpened = Date.now();
+  const r = anchor.getBoundingClientRect(), w = pop.offsetWidth;
+  pop.style.left = Math.max(12, Math.min(r.right - w, innerWidth - w - 12)) + "px";
+  pop.style.top = Math.min(r.bottom + 6, innerHeight - Math.min(pop.offsetHeight, innerHeight - 24) - 12) + "px";
+  (pop.querySelector("#fpText") || pop.querySelector("#fpSearch")).focus({ preventScroll: true });
+}
+function drawList() {
+  const s = ($("fpSearch")?.value || "").toLowerCase();
+  const vis = fpAll.filter(([v]) => !s || v.toLowerCase().includes(s));
+  const shown = vis.slice(0, 400), allOn = vis.every(([v]) => fpSel.has(v));
+  $("fpList").innerHTML = `<label class="all"><input type="checkbox" id="fpAllBox" ${allOn ? "checked" : ""}><span>(Select all${s ? " matching" : ""})</span></label>`
+    + shown.map(([v, n]) => `<label><input type="checkbox" data-v="${esc(v)}" ${fpSel.has(v) ? "checked" : ""}><span title="${esc(v)}">${esc(v)}</span><em>${n}</em></label>`).join("")
+    + (vis.length > shown.length ? `<div class="fp-more">${vis.length - shown.length} more. Search to narrow the list.</div>` : "")
+    + (!vis.length ? `<div class="fp-more">No values match.</div>` : "");
+  $("fpList").dataset.vis = JSON.stringify(vis.map(x => x[0]));
+}
+function closeFilter() { $("fpop").hidden = true; fpKey = null; }
+$("fpop").addEventListener("input", e => { if (e.target.id === "fpSearch") drawList(); });
+$("fpop").addEventListener("change", e => {
+  const t = e.target;
+  if (t.id === "fpAllBox") { for (const v of JSON.parse($("fpList").dataset.vis)) t.checked ? fpSel.add(v) : fpSel.delete(v); drawList(); }
+  else if (t.dataset.v != null) { t.checked ? fpSel.add(t.dataset.v) : fpSel.delete(t.dataset.v); const a = $("fpAllBox"); if (a) a.checked = JSON.parse($("fpList").dataset.vis).every(v => fpSel.has(v)); }
+});
+$("fpop").addEventListener("click", e => {
+  const c = colBy[fpKey]; if (!c) return;
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.id === "fpClose") return closeFilter();
+  if (t.dataset.dir) { sort = { key: fpKey, dir: Number(t.dataset.dir) }; closeFilter(); return render(); }
+  if (t.dataset.q) {
+    const q = t.dataset.q, today = new Date().toLocaleDateString("en-CA");
+    if (q === "zero") { $("fpOp").value = "eq"; $("fpA").value = 0; }
+    if (q === "neg") { $("fpOp").value = "lt"; $("fpA").value = 0; }
+    if (q === "pos") { $("fpOp").value = "gt"; $("fpA").value = 0; }
+    if ($("fpOp")) $("fpOp").dispatchEvent(new Event("change"));
+    if (q === "today") { $("fpA").value = today; $("fpB").value = today; }
+    if (q === "week") { $("fpA").value = new Date(Date.now() - 6 * 864e5).toLocaleDateString("en-CA"); $("fpB").value = today; }
+    if (q === "blank") { filters[fpKey] = { op: "blank" }; closeFilter(); return render(); }
+    return applyFilter();
+  }
+  if (t.id === "fpClear") { delete filters[fpKey]; closeFilter(); return render(); }
+  if (t.id === "fpApply") applyFilter();
+});
+$("fpop").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.tagName === "INPUT" && e.target.type !== "checkbox") { e.preventDefault(); applyFilter(); } });
+function applyFilter() {
+  const c = colBy[fpKey], f = {};
+  if (fpSel.size < fpAll.length) f.values = new Set(fpSel);
+  if (c.type === "text") { const t = $("fpText").value.trim(); if (t) f.text = t; }
+  else if (c.type === "num") { const op = $("fpOp").value, a = $("fpA").value, b = $("fpB").value; if (op !== "any" && a !== "" && (op !== "bt" || b !== "")) Object.assign(f, { op, a, b }); }
+  else { const a = $("fpA").value, b = $("fpB").value; if (a || b) Object.assign(f, { op: "range", a, b }); }
+  if (isActive(f)) filters[fpKey] = f; else delete filters[fpKey];
+  closeFilter(); render();
+}
+document.addEventListener("mousedown", e => {
+  if (!$("fpop").hidden && !e.target.closest("#fpop") && !e.target.closest("[data-filter]")) closeFilter();
+  if (!$("dlList").hidden && !e.target.closest("#dlMenu")) toggleDl(false);
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") { closeFilter(); toggleDl(false); } });
+window.addEventListener("resize", closeFilter);
+let fpOpened = 0;
+$("rows").closest(".tablebox").addEventListener("scroll", () => { if (Date.now() - fpOpened > 400) closeFilter(); }, { passive: true });
+
+// ---- verify / undo ----
 $("rows").addEventListener("click", async e => {
   const b = e.target.closest("button.act"); if (!b || role !== "owner") return;
   b.disabled = true;
-  const code = b.dataset.mk || b.dataset.un;
-  const p = products.find(x => x.code === code);
+  const code = b.dataset.mk || b.dataset.un, p = products.find(x => x.code === code);
   const res = b.dataset.mk
     ? await sb.from("checks").upsert({ code, qty: p.physical, checked_at: new Date().toISOString() }).select().single()
     : await sb.from("checks").delete().eq("code", code);
-  if (res.error) { b.disabled = false; return note("appMsg", "That didn't save: " + res.error.message, "err"); }
-  if (b.dataset.mk) { checks[code] = res.data; flashCode = code; setTimeout(() => { flashCode = null; }, 1500); } else delete checks[code];
-  note("appMsg", ""); render();
+  if (res.error) { b.disabled = false; return toast("Didn't save: " + res.error.message, "err"); }
+  if (b.dataset.mk) { checks[code] = res.data; justMarked = code; setTimeout(() => { justMarked = null; }, 1700); }
+  else { delete checks[code]; toast(`${code} set back to not checked`); }
+  render();
 });
 
-// ---------------- Tabs ----------------
+// ================= Tabs =================
 $("tabs").addEventListener("click", e => {
   const b = e.target.closest("button[data-tab]"); if (!b) return;
   for (const x of $("tabs").querySelectorAll("button")) { x.setAttribute("aria-selected", String(x === b)); $(x.dataset.tab).hidden = x !== b; }
+  closeFilter();
 });
 
-// ---------------- Spreadsheet reading ----------------
+// ================= Download =================
+function toggleDl(open) { $("dlList").hidden = !open; $("dlBtn").setAttribute("aria-expanded", String(open)); }
+$("dlBtn").onclick = () => toggleDl($("dlList").hidden);
+$("dlList").addEventListener("click", e => {
+  const b = e.target.closest("[data-dl]"); if (!b) return;
+  toggleDl(false);
+  if (!window.XLSX) return toast("The download tool didn't load. Reload the page and try again.", "err");
+  const view = b.dataset.dl === "view";
+  const list = view ? sortRows(viewRows()) : products.filter(p => !p.non_stock);
+  const rows = list.map(p => {
+    const c = checks[p.code];
+    return {
+      "Code": p.code, "Product": p.description, "Pack": p.pack || "",
+      "Supplier": supName(p.supplier) || "", "Supplier code": p.supplier || "",
+      "Physical": Number(p.physical), "UM": p.um || "", "Available": p.available == null ? "" : Number(p.available), "Reserved": p.reserved == null ? "" : Number(p.reserved),
+      "Status": p.non_stock ? "Non-stock" : c ? "Verified" : "Not checked", "Verified on": c ? new Date(c.checked_at).toLocaleDateString("en-CA") : "",
+    };
+  });
+  const stock = products.filter(p => !p.non_stock), ok = stock.filter(p => checks[p.code]).length;
+  const today = new Date().toLocaleDateString("en-CA");
+  const summary = [
+    ["Mehadrin · Inventory Accuracy"], [],
+    ["Downloaded", new Date().toLocaleString()], ["Warehouse export", exportInfo.date || "—"], ["Rows in this file", rows.length + (view ? " (current view)" : " (all stock products)")],
+    [], ["Stock products", stock.length], ["Verified", ok], ["Not checked", stock.length - ok],
+    ["Percent verified", stock.length ? (Math.round(ok / stock.length * 10000) / 100).toFixed(2) + "%" : "0.00%"],
+  ];
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet(summary); ws1["!cols"] = [{ wch: 22 }, { wch: 40 }];
+  const ws2 = XLSX.utils.json_to_sheet(rows.length ? rows : [{ Code: "" }]);
+  ws2["!cols"] = [10, 46, 14, 26, 14, 10, 6, 10, 10, 14, 12].map(w => ({ wch: w }));
+  if (rows.length) ws2["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: 10 } }) };
+  XLSX.utils.book_append_sheet(wb, ws1, "Summary");
+  XLSX.utils.book_append_sheet(wb, ws2, "Products");
+  XLSX.writeFile(wb, `inventory-accuracy-${view ? "view-" : ""}${today}.xlsx`);
+  toast(`Downloaded ${rows.length.toLocaleString()} products`);
+});
+
+// ================= Spreadsheet reading =================
 async function readRows(file) {
-  if (/\.(csv|txt)$/i.test(file.name)) {
-    return (await file.text()).split(/\r?\n/).map(l => l.split(/[,\t;]/).map(s => s.replace(/^"|"$/g, "")));
-  }
+  if (/\.(csv|txt)$/i.test(file.name)) return (await file.text()).split(/\r?\n/).map(l => l.split(/[,\t;]/).map(s => s.replace(/^"|"$/g, "")));
   const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
   return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: null });
 }
@@ -890,7 +1018,7 @@ function wireDrop(dropId, inputId, handler) {
   d.addEventListener("drop", e => { e.preventDefault(); d.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) handler(f); });
 }
 
-// ---------------- Batch mark accurate ----------------
+// ================= Batch mark accurate =================
 let bPending = [];
 function bPrepare(codes, source) {
   const byCode = new Map(products.map(p => [p.code.toLowerCase(), p]));
@@ -900,7 +1028,7 @@ function bPrepare(codes, source) {
     const k = c.toLowerCase(); if (seen.has(k) || k === "code") continue; seen.add(k);
     const p = byCode.get(k);
     if (!p) missing.push(c); else if (p.non_stock) missing.push(c + " (non-stock)");
-    else if (statusOf(p) === "ok") already.push(p); else todo.push(p);
+    else if (checks[p.code]) already.push(p); else todo.push(p);
   }
   bPending = todo;
   let h = `<div><strong>${esc(source)}:</strong> ${(todo.length + already.length).toLocaleString()} products found. ${todo.length.toLocaleString()} will be marked accurate${already.length ? `, ${already.length.toLocaleString()} already were` : ""}.</div>`;
@@ -929,10 +1057,11 @@ $("bGo").onclick = async () => {
     if (error) { $("bPrev").innerHTML = `<div class="missing">Saved ${i} of ${rows.length}, then stopped: ${esc(error.message)}. Upload the same list again to finish.</div>`; $("bGo").hidden = true; return loadAll(); }
   }
   $("bPrev").innerHTML = `<div><strong>${rows.length.toLocaleString()} products marked accurate.</strong></div>`;
+  toast(`${rows.length.toLocaleString()} products marked accurate`);
   $("bGo").hidden = true; $("bPaste").value = ""; bPending = []; loadAll();
 };
 
-// ---------------- New warehouse export ----------------
+// ================= New warehouse export =================
 let ePending = null;
 wireDrop("eDrop", "eFile", async f => {
   ePending = null; $("eGo").hidden = true;
@@ -973,53 +1102,18 @@ $("eGo").onclick = async () => {
   const { list, removed, exportDate } = ePending;
   $("eGo").disabled = true; $("eGo").textContent = "Saving…";
   try {
-    for (let i = 0; i < list.length; i += 500) {
-      const { error } = await sb.from("products").upsert(list.slice(i, i + 500)); if (error) throw error;
-    }
-    for (let i = 0; i < removed.length; i += 200) {
-      const { error } = await sb.from("products").delete().in("code", removed.slice(i, i + 200)); if (error) throw error;
-    }
+    for (let i = 0; i < list.length; i += 500) { const { error } = await sb.from("products").upsert(list.slice(i, i + 500)); if (error) throw error; }
+    for (let i = 0; i < removed.length; i += 200) { const { error } = await sb.from("products").delete().in("code", removed.slice(i, i + 200)); if (error) throw error; }
     const { error } = await sb.from("meta").upsert([{ key: "export_date", value: exportDate }]); if (error) throw error;
     $("ePrev").innerHTML = `<div><strong>Product list updated: ${list.length.toLocaleString()} lines.</strong></div>`;
+    toast("Product list updated");
   } catch (err) {
     $("ePrev").innerHTML = `<div class="missing">The upload stopped partway: ${esc(err.message)}. Upload the same file again to finish.</div>`;
   }
   $("eGo").hidden = true; $("eGo").textContent = "Replace product list"; ePending = null; loadAll();
 };
 
-// ---------------- Download current status ----------------
-$("dl").onclick = () => {
-  if (!window.XLSX) return note("appMsg", "The download tool didn't load. Reload the page and try again.", "err");
-  const label = { ok: "Accurate", todo: "Not checked" };
-  const stock = products.filter(p => !p.non_stock);
-  const rows = stock.map(p => {
-    const c = checks[p.code], s = statusOf(p);
-    return {
-      "Code": p.code, "Product": p.description, "Pack": p.pack || "",
-      "Supplier": supName(p.supplier) || "", "Supplier code": p.supplier || "",
-      "Physical": Number(p.physical), "UM": p.um || "", "Available": p.available == null ? "" : Number(p.available), "Reserved": p.reserved == null ? "" : Number(p.reserved),
-      "Status": label[s], "Checked on": c ? new Date(c.checked_at).toLocaleDateString("en-CA") : "",
-    };
-  });
-  const ok = rows.filter(r => r.Status === "Accurate").length;
-  const today = new Date().toLocaleDateString("en-CA");
-  const summary = [
-    ["Inventory Accuracy status"], [],
-    ["Downloaded", new Date().toLocaleString()], ["Warehouse export", $("meta").textContent],
-    [], ["Stock products", rows.length], ["Accurate", ok], ["Not checked", rows.length - ok],
-    ["Percent accurate", rows.length ? Math.round(ok / rows.length * 10000) / 100 + "%" : "0%"],
-  ];
-  const wb = XLSX.utils.book_new();
-  const ws1 = XLSX.utils.aoa_to_sheet(summary); ws1["!cols"] = [{ wch: 22 }, { wch: 40 }];
-  const ws2 = XLSX.utils.json_to_sheet(rows);
-  ws2["!cols"] = [10, 46, 14, 26, 14, 10, 6, 10, 10, 14, 12].map(w => ({ wch: w }));
-  ws2["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: 10 } }) };
-  XLSX.utils.book_append_sheet(wb, ws1, "Summary");
-  XLSX.utils.book_append_sheet(wb, ws2, "Products");
-  XLSX.writeFile(wb, `inventory-accuracy-${today}.xlsx`);
-};
-
-// ---------------- Supplier names ----------------
+// ================= Supplier names =================
 let sPending = null;
 function sPrepare(pairs, source) {
   const orig = new Map(products.filter(p => !p.non_stock && p.supplier).map(p => [supKey(p.supplier), p.supplier]));
@@ -1057,10 +1151,11 @@ $("sGo").onclick = async () => {
   const { error } = await sb.from("meta").upsert([{ key: "suppliers", value: JSON.stringify(merged) }]);
   if (error) { $("sPrev").innerHTML = `<div class="missing">Didn't save: ${esc(error.message)}</div>`; $("sGo").disabled = false; return; }
   $("sPrev").innerHTML = `<div><strong>Saved ${Object.keys(sPending).length} supplier names.</strong></div>`;
+  toast("Supplier names saved");
   $("sGo").hidden = true; $("sPaste").value = ""; sPending = null; loadAll();
 };
 
-// ---------------- People ----------------
+// ================= People =================
 async function loadPeople() {
   profiles = await fetchAll("profiles", "id,email,role,created_at");
   const pend = profiles.filter(p => p.role === "pending").length;
@@ -1068,14 +1163,14 @@ async function loadPeople() {
   const label = { pending: "Waiting", viewer: "Approved", blocked: "Blocked" };
   $("people").innerHTML = profiles.map(p => `<tr><td>${esc(p.email)}</td><td>${fmtDate(p.created_at)}</td><td>${p.role === "owner" ? "<b>Owner</b>"
     : `<select data-person="${esc(p.id)}" aria-label="Access for ${esc(p.email)}">${Object.entries(label).map(([v, l]) => `<option value="${v}" ${p.role === v ? "selected" : ""}>${l}</option>`).join("")}</select>`}</td></tr>`).join("")
-    || `<tr><td colspan="3" class="meta">Nobody else has signed up yet.</td></tr>`;
+    || `<tr><td colspan="3" class="empty">Nobody else has signed up yet.</td></tr>`;
 }
 $("people").addEventListener("change", async e => {
   const s = e.target.closest("select[data-person]"); if (!s) return;
   s.disabled = true;
   const { error } = await sb.from("profiles").update({ role: s.value }).eq("id", s.dataset.person);
   s.disabled = false;
-  if (error) note("appMsg", "Couldn't change access: " + error.message, "err"); else { note("appMsg", "Access updated.", "ok"); loadPeople(); }
+  if (error) toast("Couldn't change access: " + error.message, "err"); else { toast("Access updated"); loadPeople(); }
 });
 </script>
 </body>
