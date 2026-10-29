@@ -110,6 +110,42 @@ input, select, textarea { font: inherit; color: var(--fg); }
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (max-width: 720px) { .user .em { display: none; } .appbar .ttl { display: none; } }
 
+/* ---------- compact summary bar (slides in once the big band scrolls away) ---------- */
+:root { --mini-h: 64px; }
+#mini { position: fixed; left: 0; right: 0; top: 0; height: var(--mini-h); z-index: 28; color: #fff;
+  background: linear-gradient(100deg, var(--blue-800), var(--blue) 55%, #3d86d4); box-shadow: 0 8px 24px rgba(14,42,79,.25);
+  transform: translateY(-110%); transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+#mini::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(90deg, var(--red), var(--red) 30%, #fff 30%, #fff 31%, transparent 31%); }
+#mini.show { transform: none; }
+#mini .in { max-width: 1680px; height: 100%; margin: 0 auto; padding: 0 20px; display: flex; align-items: center; gap: 22px; }
+#mini .mlogo { width: 74px; flex: none; background-color: #fff; border-radius: 8px; padding: 3px 6px; background-origin: content-box; }
+.mring { width: 44px; height: 44px; flex: none; position: relative; }
+.mring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.mring .bgc { stroke: rgba(255,255,255,.16); } .mring .fg { stroke: #fff; stroke-linecap: round; }
+.mstat { display: grid; line-height: 1.15; min-width: 0; }
+.mstat b { font: 800 1.2rem var(--display); letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mstat b small { font: 500 .8rem var(--body); opacity: .75; }
+.mstat span { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; opacity: .78; white-space: nowrap; }
+.mbar { flex: 1; min-width: 60px; max-width: 360px; height: 6px; background: rgba(255,255,255,.2); border-radius: 99px; overflow: hidden; }
+.mbar i { display: block; height: 100%; width: 0; background: #fff; border-radius: inherit; transition: width .4s; }
+@media (max-width: 760px) { #mini .mlogo, #mini .mexp, .mbar { display: none; } #mini .in { gap: 18px; } }
+@media (max-width: 520px) { #mini .mver { display: none; } }
+
+/* ---------- ambient brand glow in the page margins, drifts with scroll ---------- */
+#ambient { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+#ambient i { position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%; opacity: .55; will-change: transform;
+  transform: translate3d(0, calc(var(--sy, 0) * var(--k) * 1px), 0) rotate(calc(var(--sy, 0) * .02deg)); }
+#ambient i::before { content: ""; position: absolute; inset: 0; border-radius: 50%; animation: breathe var(--d) ease-in-out infinite alternate; background: inherit; }
+#ambient .a1 { left: -22vmax; top: 10vh; --k: -.12; --d: 11s; background: radial-gradient(circle, rgba(44,108,180,.55), transparent 62%); }
+#ambient .a2 { right: -24vmax; top: 30vh; --k: -.22; --d: 14s; background: radial-gradient(circle, rgba(237,31,44,.30), transparent 60%); }
+#ambient .a3 { left: -18vmax; top: 85vh; --k: -.3; --d: 9s; background: radial-gradient(circle, rgba(237,31,44,.22), transparent 60%); }
+#ambient .a4 { right: -20vmax; top: 110vh; --k: -.38; --d: 12s; background: radial-gradient(circle, rgba(61,134,212,.5), transparent 62%); }
+#ambient .a5 { left: -26vmax; top: 160vh; --k: -.5; --d: 16s; background: radial-gradient(circle, rgba(127,178,234,.5), transparent 62%); }
+#ambient .a6 { right: -22vmax; top: 200vh; --k: -.62; --d: 10s; background: radial-gradient(circle, rgba(237,31,44,.22), transparent 60%); }
+@keyframes breathe { from { transform: scale(.85) translate(-3%, 2%); opacity: .7; } to { transform: scale(1.12) translate(3%, -3%); opacity: 1; } }
+@media (prefers-color-scheme: dark) { #ambient i { opacity: .4; } }
+#vApp { position: relative; z-index: 1; }
+
 /* ---------- hero ---------- */
 .hero { position: relative; overflow: hidden; color: #fff; background: radial-gradient(90% 140% at 85% 0%, #3d86d4 0%, var(--blue) 40%, var(--blue-800) 100%); }
 .hero::before { content: ""; position: absolute; right: -8%; top: -60px; width: 46%; height: 120px; background: var(--red); border-radius: 0 0 0 100% / 0 0 0 100%; box-shadow: -10px 10px 0 rgba(255,255,255,.9); opacity: .95; }
@@ -169,7 +205,7 @@ input, select, textarea { font: inherit; color: var(--fg); }
 /* Freeze panes: on screens wide enough for the whole table, the column titles stay pinned to the top while the page scrolls */
 @media (min-width: 1300px) {
   #tTrack .tablebox { overflow: visible; }
-  #tTrack thead th { position: sticky; top: 0; z-index: 5; box-shadow: 0 1px 0 var(--line), 0 6px 12px -8px rgba(14,42,79,.25); }
+  #tTrack thead th { position: sticky; top: var(--mini-h); z-index: 5; box-shadow: 0 1px 0 var(--line), 0 6px 12px -8px rgba(14,42,79,.25); }
   #tTrack thead th:first-child { border-top-left-radius: 13px; }
   #tTrack thead th:last-child { border-top-right-radius: 13px; }
 }
@@ -374,6 +410,16 @@ textarea:focus { outline: none; border-color: var(--blue); }
 </div>
 
 <!-- ============ App ============ -->
+<div id="ambient" aria-hidden="true" hidden><i class="a1"></i><i class="a2"></i><i class="a3"></i><i class="a4"></i><i class="a5"></i><i class="a6"></i></div>
+<div id="mini" aria-hidden="true"><div class="in">
+  <div class="logo mlogo"></div>
+  <div class="mring"><svg viewBox="0 0 44 44"><circle class="bgc" cx="22" cy="22" r="18" fill="none" stroke-width="5"/><circle class="fg" id="mRing" cx="22" cy="22" r="18" fill="none" stroke-width="5" stroke-dasharray="113.1" stroke-dashoffset="113.1"/></svg></div>
+  <div class="mstat"><b id="mPct">0.00%</b><span>verified</span></div>
+  <div class="mstat mver"><b id="mVer">0 <small>of 0</small></b><span>verified accurate</span></div>
+  <div class="mstat"><b id="mTodo">0</b><span>still to check</span></div>
+  <div class="mbar"><i id="mBar"></i></div>
+  <div class="mstat mexp"><b id="mExp" style="font-size:1rem">—</b><span>warehouse export</span></div>
+</div></div>
 <div id="vApp" hidden>
   <header class="appbar"><div class="in">
     <div class="logo" role="img" aria-label="Mehadrin"></div>
@@ -733,6 +779,15 @@ function setGauge(pct) {
   $("ring").style.strokeDashoffset = String(339.29 * (1 - pct / 100));
   $("verBar").style.width = pct + "%";
 }
+function updateMini(ok, total) {
+  const pct = total ? Math.round(ok / total * 10000) / 100 : 0;
+  $("mPct").textContent = pct.toFixed(2) + "%";
+  $("mVer").innerHTML = `${ok.toLocaleString()} <small>of ${total.toLocaleString()}</small>`;
+  $("mTodo").textContent = (total - ok).toLocaleString();
+  $("mRing").style.strokeDashoffset = String(113.1 * (1 - pct / 100));
+  $("mBar").style.width = pct + "%";
+  $("mExp").textContent = $("sExport").textContent;
+}
 function countTo(el, value, { suffix = "", dec = 0, onStep = null } = {}) {
   const from = Number(el.dataset.n ?? 0);
   if (from === value && el.dataset.n != null && el.dataset.busy !== "1") return;
@@ -755,6 +810,7 @@ function renderKpis() {
   const stock = products.filter(p => !p.non_stock), total = stock.length;
   const ok = stock.filter(p => checks[p.code]).length;
   $("sVerOf").textContent = `of ${total.toLocaleString()} stock products`;
+  updateMini(ok, total);
   countTo($("sVer"), ok);
   countTo($("sTodo"), total - ok);
   countTo($("sPct"), total ? Math.round(ok / total * 10000) / 100 : 0, { suffix: "%", dec: 2, onStep: setGauge });
@@ -999,10 +1055,29 @@ $("rows").addEventListener("click", async e => {
   render();
 });
 
+// ================= Compact bar + ambient glow =================
+(() => {
+  const hero = document.querySelector(".hero"), mini = $("mini"), amb = $("ambient");
+  const io = new IntersectionObserver(([e]) => {
+    const show = !e.isIntersecting && !$("vApp").hidden && !$("tTrack").hidden;
+    mini.classList.toggle("show", show);
+  }, { threshold: 0, rootMargin: "-64px 0px 0px 0px" });
+  io.observe(hero);
+  window.recheckMini = () => { io.unobserve(hero); io.observe(hero); };
+  let ticking = false;
+  const onScroll = () => {
+    if (ticking) return; ticking = true;
+    requestAnimationFrame(() => { amb.style.setProperty("--sy", String(scrollY)); ticking = false; });
+  };
+  if (!reduceMotion) addEventListener("scroll", onScroll, { passive: true });
+  new MutationObserver(() => { amb.hidden = $("vApp").hidden; if ($("vApp").hidden) mini.classList.remove("show"); }).observe($("vApp"), { attributes: true, attributeFilter: ["hidden"] });
+})();
+
 // ================= Tabs =================
 $("tabs").addEventListener("click", e => {
   const b = e.target.closest("button[data-tab]"); if (!b) return;
   for (const x of $("tabs").querySelectorAll("button")) { x.setAttribute("aria-selected", String(x === b)); $(x.dataset.tab).hidden = x !== b; }
+  if (b.dataset.tab !== "tTrack") $("mini").classList.remove("show"); else recheckMini();
   closeFilter();
 });
 
